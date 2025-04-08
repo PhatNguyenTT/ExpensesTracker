@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
+
 class CategoryEntity {
   String categoryId;
   String name;
   int totalExpenses;
   String icon;
-  int color;
+  Color color;
 
   CategoryEntity({
     required this.categoryId,
@@ -19,7 +21,7 @@ class CategoryEntity {
       'name': name,
       'totalExpenses': totalExpenses,
       'icon': icon,
-      'color': color,
+      'color': color.value,
     };
   }
 
@@ -29,7 +31,7 @@ class CategoryEntity {
       name: doc['name'],
       totalExpenses: doc['totalExpenses'],
       icon: doc['icon'],
-      color: doc['color'],
+      color: Color(doc['color']),
     );
   }
 }

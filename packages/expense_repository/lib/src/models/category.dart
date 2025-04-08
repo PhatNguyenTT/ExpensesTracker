@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../entities/entities.dart';
 
 class Category {
@@ -5,7 +7,7 @@ class Category {
   String name;
   int totalExpenses;
   String icon;
-  int color;
+  Color color;
 
   Category({
     required this.categoryId,
@@ -16,12 +18,11 @@ class Category {
   });
 
   static final empty = Category(
-    categoryId: '', 
-    name: '', 
-    totalExpenses: 0, 
-    icon: '', 
-    color: 0
-  );
+      categoryId: '',
+      name: '',
+      totalExpenses: 0,
+      icon: '',
+      color: Colors.white);
 
   CategoryEntity toEntity() {
     return CategoryEntity(
