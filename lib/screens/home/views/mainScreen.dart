@@ -1,16 +1,27 @@
 import 'dart:math';
 
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expenses_tracker/screens/home/views/view_all_expenses.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:expenses_tracker/data/data.dart';
-import 'package:expenses_tracker/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
+import 'package:expenses_tracker/utils/currency_formatter.dart';
+import 'package:expenses_tracker/utils/stats_helper.dart';
 
 class MainScreen extends StatelessWidget {
   final List<Expense> expenses;
-  const MainScreen(this.expenses, {super.key});
+  final int incomeTotal;
+  final int expenseTotal;
+  final int balance;
+
+  const MainScreen(
+    this.expenses, {
+    super.key,
+    required this.incomeTotal,
+    required this.expenseTotal,
+    required this.balance,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +30,7 @@ class MainScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10),
         child: Column(
           children: [
+            // ------------------ Greeting & Settings ------------------
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -41,162 +53,133 @@ class MainScreen extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "Xin chào!",
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.outline),
-                        ),
-                        Text(
-                          "Con Cac",
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface),
-                        ),
+                        Text("Xin chào!",
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.outline)),
+                        Text("Con Cac",
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    Theme.of(context).colorScheme.onSurface)),
                       ],
                     ),
                   ],
                 ),
                 IconButton(
-                    onPressed: () {}, icon: Icon(CupertinoIcons.settings_solid))
+                    onPressed: () {},
+                    icon: const Icon(CupertinoIcons.settings_solid))
               ],
             ),
             const SizedBox(height: 20),
+
+            // ------------------ Balance Card ------------------
             Container(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.width / 2,
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.secondary,
-                        Theme.of(context).colorScheme.tertiary,
-                      ],
-                      transform: const GradientRotation(pi / 4),
-                    ),
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.shade400,
-                        spreadRadius: 5,
-                        blurRadius: 7,
-                        offset: const Offset(0, 3),
-                      )
-                    ]),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Tổng số dư',
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.width / 2,
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.secondary,
+                      Theme.of(context).colorScheme.tertiary,
+                    ],
+                    transform: const GradientRotation(pi / 4),
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade400,
+                      spreadRadius: 5,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    )
+                  ]),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Tổng số dư',
                       style: TextStyle(
                           fontWeight: FontWeight.w400,
                           fontSize: 16,
-                          color: Colors.white),
-                    ),
-                    const SizedBox(
-                      height: 13,
-                    ),
-                    const Text(
-                      '200.000\₫',
-                      style: TextStyle(
+                          color: Colors.white)),
+                  const SizedBox(height: 13),
+                  Text(formatSignedCurrency(balance),
+                      style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 25,
-                          color: Colors.white),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 13, horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 25,
-                                height: 25,
-                                decoration: const BoxDecoration(
-                                    color: Colors.white30,
-                                    shape: BoxShape.circle),
-                                child: Center(
-                                  child: Icon(
-                                    CupertinoIcons.arrow_down,
-                                    size: 12,
-                                    color: Colors.greenAccent,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 8,
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Thu nhập',
+                          color: Colors.white)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 13, horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Thu nhập
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 12.5,
+                              backgroundColor: Colors.white30,
+                              child: Icon(CupertinoIcons.arrow_down,
+                                  size: 12, color: Colors.greenAccent),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Thu nhập',
                                     style: TextStyle(
                                         fontWeight: FontWeight.w400,
                                         fontSize: 12,
-                                        color: Colors.white),
-                                  ),
-                                  const Text(
-                                    '50.000\₫',
-                                    style: TextStyle(
+                                        color: Colors.white)),
+                                Text(formatSignedCurrency(incomeTotal),
+                                    style: const TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
-                                        color: Colors.white),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                width: 25,
-                                height: 25,
-                                decoration: const BoxDecoration(
-                                    color: Colors.white30,
-                                    shape: BoxShape.circle),
-                                child: Center(
-                                  child: Icon(
-                                    CupertinoIcons.arrow_up,
-                                    size: 12,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 8,
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Chi tiêu',
+                                        color: Colors.white)),
+                              ],
+                            )
+                          ],
+                        ),
+                        // Chi tiêu
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 12.5,
+                              backgroundColor: Colors.white30,
+                              child: Icon(CupertinoIcons.arrow_up,
+                                  size: 12, color: Colors.red),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Chi tiêu',
                                     style: TextStyle(
                                         fontWeight: FontWeight.w400,
                                         fontSize: 12,
-                                        color: Colors.white),
-                                  ),
-                                  const Text(
-                                    '50.000\₫',
-                                    style: TextStyle(
+                                        color: Colors.white)),
+                                Text(formatSignedCurrency(expenseTotal),
+                                    style: const TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
-                                        color: Colors.white),
-                                  ),
-                                ],
-                              )
-                            ],
-                          )
-                        ],
-                      ),
+                                        color: Colors.white)),
+                              ],
+                            )
+                          ],
+                        )
+                      ],
                     ),
-                  ],
-                )),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 40),
+
+            // ------------------ List giao dịch ------------------
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -208,7 +191,14 @@ class MainScreen extends StatelessWidget {
                       color: Theme.of(context).colorScheme.onSurface),
                 ),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ViewAllExpenses(expenses: expenses),
+                      ),
+                    );
+                  },
                   child: Text(
                     'Xem tất cả',
                     style: TextStyle(
@@ -224,6 +214,7 @@ class MainScreen extends StatelessWidget {
               child: ListView.builder(
                 itemCount: expenses.length,
                 itemBuilder: (context, int i) {
+                  final expense = expenses[i];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: Container(
@@ -236,26 +227,27 @@ class MainScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+                            // Icon + Tên danh mục
                             Row(children: [
                               Stack(
                                 alignment: Alignment.center,
                                 children: [
                                   Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: expenses[i].category.color,
-                                        shape: BoxShape.circle,
-                                      )),
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: expense.category.color,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
                                   Image.asset(
-                                      'assets/${expenses[i].category.icon}.png',
-                                      scale: 1.5)
-                                  // transactionsData[i]['icon'],
+                                      'assets/${expense.category.icon}.png',
+                                      scale: 1.5),
                                 ],
                               ),
-                              SizedBox(width: 10),
+                              const SizedBox(width: 10),
                               Text(
-                                expenses[i].category.name,
+                                expense.category.name,
                                 style: TextStyle(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 14,
@@ -264,20 +256,22 @@ class MainScreen extends StatelessWidget {
                                         .onSurface),
                               ),
                             ]),
+                            // Giá trị + Ngày
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  formatSignedCurrency(expenses[i].amount),
+                                  formatSignedCurrency(
+                                      expense.category.totalExpenses),
                                   style: TextStyle(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 14,
-                                      color:
-                                          getAmountColor(expenses[i].amount)),
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 14,
+                                    color: getAmountColor(
+                                        expense.category.totalExpenses),
+                                  ),
                                 ),
                                 Text(
-                                  DateFormat('dd/MM/yyyy')
-                                      .format(expenses[i].date),
+                                  DateFormat('dd/MM/yyyy').format(expense.date),
                                   style: TextStyle(
                                       fontWeight: FontWeight.w400,
                                       fontSize: 14,

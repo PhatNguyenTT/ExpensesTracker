@@ -12,7 +12,8 @@ import 'package:expenses_tracker/screens/addExpense/views/addExpense.dart';
 import 'package:expenses_tracker/screens/calendar/calendar.dart';
 import 'package:expenses_tracker/screens/home/views/mainScreen.dart';
 import 'package:expenses_tracker/screens/profile/profile.dart';
-import 'package:expenses_tracker/screens/stats/stats.dart';
+import 'package:expenses_tracker/screens/stats/statsScreen.dart';
+import 'package:expenses_tracker/utils/stats_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,13 +23,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // var widgetList = [
-  //   MainScreen(),
-  //   const CalendarScreen(),
-  //   const StatsScreen(),
-  //   const ProfileScreen(),
-  // ];
-
   int index = 0;
 
   @override
@@ -36,6 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return BlocBuilder<GetExpensesBloc, GetExpensesState>(
         builder: (context, state) {
       if (state is GetExpensesSuccess) {
+        final incomeTotal = calculateTotalIncome(state.expenses);
+        final expenseTotal = calculateTotalExpense(state.expenses);
+        final balance = calculateBalance(state.expenses);
+
         return Scaffold(
           appBar: AppBar(),
           bottomNavigationBar: ClipRRect(
@@ -119,7 +117,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           body: index == 0
-              ? MainScreen(state.expenses)
+              ? MainScreen(
+                  state.expenses,
+                  incomeTotal: incomeTotal,
+                  expenseTotal: expenseTotal,
+                  balance: balance,
+                )
               : index == 1
                   ? const CalendarScreen()
                   : index == 2
@@ -127,8 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       : const ProfileScreen(),
         );
       } else {
-        return Scaffold(
-          body: CircularProgressIndicator(),
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
         );
       }
     });
