@@ -9,11 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:expenses_tracker/screens/addExpense/blocs/create_category_bloc/create_category_bloc.dart';
 import 'package:expenses_tracker/screens/addExpense/views/addExpense.dart';
-import 'package:expenses_tracker/screens/calendar/calendar.dart';
+import 'package:expenses_tracker/screens/calendar/calendarScreen.dart';
 import 'package:expenses_tracker/screens/home/views/mainScreen.dart';
 import 'package:expenses_tracker/screens/profile/profile.dart';
 import 'package:expenses_tracker/screens/stats/statsScreen.dart';
-import 'package:expenses_tracker/utils/stats_helper.dart';
+import 'package:expenses_tracker/screens/stats/stats_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     balance: stats.balance,
                   )
                 : index == 1
-                    ? const CalendarScreen()
+                    ? CalendarScreen(expenses: state.expenses)
                     : index == 2
                         ? StatsScreen(state.expenses)
                         : const ProfileScreen(),

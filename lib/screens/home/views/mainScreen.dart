@@ -10,7 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:expenses_tracker/utils/currency_formatter.dart';
-import 'package:expenses_tracker/utils/stats_helper.dart';
+import 'package:expenses_tracker/screens/stats/stats_helper.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 
 class MainScreen extends StatelessWidget {

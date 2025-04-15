@@ -1,7 +1,7 @@
 import 'package:expense_repository/expense_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:expenses_tracker/screens/stats/pie_chart_with_badge.dart';
+import 'package:expenses_tracker/screens/stats/chart/pie_chart_with_badge.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 
