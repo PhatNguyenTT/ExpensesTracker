@@ -118,6 +118,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     const AlwaysScrollableScrollPhysics(), // Đảm bảo ListView luôn cuộn được
                 itemBuilder: (context, index) {
                   final expense = expensesForSelectedDay[index];
+<<<<<<< HEAD
                   Color itemColor;
 
                   // Đặt màu cho giao dịch thu nhập (màu xanh) và chi tiêu (màu trắng)
@@ -131,6 +132,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         Colors.black; // Mặc định, nếu có loại giao dịch khác
                   }
 
+=======
+>>>>>>> origin/main
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
@@ -145,15 +148,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       trailing: Text(
                         formatSignedCurrency(expense.amount),
                         style: TextStyle(
+<<<<<<< HEAD
                           color:
                               itemColor, // Sử dụng màu cho từng loại giao dịch
+=======
+                          color: expense.amount < 0 ? Colors.red : Colors.green,
+>>>>>>> origin/main
                         ),
                       ),
                     ),
                   );
                 },
               ),
+<<<<<<< HEAD
             )
+=======
+            ),
+>>>>>>> origin/main
           ],
         ),
       ),

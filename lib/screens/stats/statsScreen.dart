@@ -135,7 +135,11 @@ class _StatsScreenState extends State<StatsScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
+<<<<<<< HEAD
                       color: Theme.of(context).colorScheme.surface,
+=======
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+>>>>>>> origin/main
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -185,10 +189,16 @@ class _StatsScreenState extends State<StatsScreen> {
                           ],
                         ),
                         Text(
+<<<<<<< HEAD
                           NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
                               .format(e.amount),
                           style: const TextStyle(
                             color: Colors.black,
+=======
+                          '${e.amount > 0 ? '+' : ''}${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
+                          style: TextStyle(
+                            color: e.amount < 0 ? Colors.red : Colors.green,
+>>>>>>> origin/main
                             fontWeight: FontWeight.bold,
                           ),
                         ),

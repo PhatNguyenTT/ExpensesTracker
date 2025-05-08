@@ -4,6 +4,10 @@ import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/ge
 import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/delete/delete_expense_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/update/update_expense_bloc.dart';
+<<<<<<< HEAD
+=======
+import 'package:expenses_tracker/utils/currency_formatter.dart';
+>>>>>>> origin/main
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +26,7 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
   bool isEditing = false;
 
   Future<Expense?> _navigateToAddExpense(BuildContext context, Expense? e) {
+<<<<<<< HEAD
     return Navigator.push<Expense>(context, MaterialPageRoute(builder: (_) {
       return MultiBlocProvider(
         providers: [
@@ -36,6 +41,28 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
         child: AddExpense(expenseToEdit: e),
       );
     }));
+=======
+    return Navigator.push<Expense>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (context) => UpdateExpenseBloc(FirebaseExpenseRepo()),
+            ),
+            BlocProvider(
+              create: (context) => CreateExpenseBloc(FirebaseExpenseRepo()),
+            ),
+            BlocProvider(
+              create: (context) => GetCategoriesBloc(FirebaseExpenseRepo())
+                ..add(GetCategories()),
+            ),
+          ],
+          child: AddExpense(expenseToEdit: e),
+        ),
+      ),
+    );
+>>>>>>> origin/main
   }
 
   @override
@@ -118,6 +145,7 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                 children: grouped.entries.map((entry) {
                   final date = entry.key;
                   final expenses = entry.value;
+<<<<<<< HEAD
 
                   // Tính tổng tiền và số giao dịch trong ngày
                   final sum = expenses.fold<int>(0, (a, b) {
@@ -127,6 +155,9 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                   });
 
                   final numTransactions = expenses.length;
+=======
+                  final sum = expenses.fold<int>(0, (a, b) => a + b.amount);
+>>>>>>> origin/main
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,6 +171,7 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                             Text(date,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
+<<<<<<< HEAD
                             RichText(
                               text: TextSpan(
                                 text:
@@ -156,12 +188,21 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                                 ],
                               ),
                             ),
+=======
+                            Text(formatSignedCurrency(sum),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: getAmountColor(sum))),
+>>>>>>> origin/main
                           ],
                         ),
                       ),
                       ...expenses.map((e) {
                         final iconData = IconMapper.getIcon(e.category.icon);
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
                         return ListTile(
                           onTap: () async {
                             if (!isEditing) return;
@@ -256,6 +297,10 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                                           context.read<DeleteExpenseBloc>().add(
                                               DeleteExpenseRequested(
                                                   e.expenseId));
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main
                                           setState(() {
                                             widget.expenses.remove(e);
                                           });
@@ -264,6 +309,7 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                                     ),
                                   ],
                                 )
+<<<<<<< HEAD
                               : Text(
                                   '${e.category.type.name == 'income' ? '+' : '-'}${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
                                   style: TextStyle(
@@ -273,13 +319,20 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                                         : Colors.red,
                                   ),
                                 ),
+=======
+                              : null,
+>>>>>>> origin/main
                         );
                       }),
                     ],
                   );
                 }).toList(),
               ),
+<<<<<<< HEAD
             ),
+=======
+            )
+>>>>>>> origin/main
           ],
         ),
       ),
