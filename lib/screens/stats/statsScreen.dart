@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:expenses_tracker/screens/stats/chart/pie_chart_with_badge.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/utils/icon_mapper.dart';
+import 'package:expenses_tracker/screens/stats/views/statsExpense.dart';
 
 class StatsScreen extends StatefulWidget {
   final List<Expense> expenses;
@@ -130,79 +131,84 @@ class _StatsScreenState extends State<StatsScreen> {
                 itemCount: filteredExpenses.length,
                 itemBuilder: (context, i) {
                   final e = filteredExpenses[i];
-                  return Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-<<<<<<< HEAD
-                      color: Theme.of(context).colorScheme.surface,
-=======
-                      color: Theme.of(context).colorScheme.surfaceVariant,
->>>>>>> origin/main
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: e.category.color,
-                              child: Icon(
-                                IconMapper.getIcon(e.category.icon) ??
-                                    Icons.category,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  e.category.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  DateFormat('dd/MM/yyyy').format(e.date),
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
-                                  ),
-                                ),
-                                if (e.note != null && e.note!.isNotEmpty)
-                                  Text(
-                                    e.note!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Text(
-<<<<<<< HEAD
-                          NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                              .format(e.amount),
-                          style: const TextStyle(
-                            color: Colors.black,
-=======
-                          '${e.amount > 0 ? '+' : ''}${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
-                          style: TextStyle(
-                            color: e.amount < 0 ? Colors.red : Colors.green,
->>>>>>> origin/main
-                            fontWeight: FontWeight.bold,
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StatsExpenseScreen(
+                            expenses: widget.expenses,
+                            category: e.category,
                           ),
                         ),
-                      ],
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: e.category.color,
+                                child: Icon(
+                                  IconMapper.getIcon(e.category.icon) ??
+                                      Icons.category,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    e.category.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    DateFormat('dd/MM/yyyy').format(e.date),
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.outline,
+                                    ),
+                                  ),
+                                  if (e.note != null && e.note!.isNotEmpty)
+                                    Text(
+                                      e.note!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Text(
+                            NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                                .format(e.amount),
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

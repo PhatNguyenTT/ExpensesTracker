@@ -51,14 +51,10 @@ class _AddExpenseState extends State<AddExpense>
       categoryController.clear();
     }
 
-<<<<<<< HEAD
     final isEditingIncome =
         widget.expenseToEdit?.category.type == tt.TransactionType.income;
     _tabController = TabController(
         length: 2, vsync: this, initialIndex: isEditingIncome ? 1 : 0);
-=======
-    _tabController = TabController(length: 2, vsync: this);
->>>>>>> origin/main
     _tabController.addListener(() {
       setState(() {
         selectedType = _tabController.index == 0

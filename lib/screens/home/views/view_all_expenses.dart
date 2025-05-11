@@ -4,14 +4,16 @@ import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/ge
 import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/delete/delete_expense_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/update/update_expense_bloc.dart';
-<<<<<<< HEAD
-=======
-import 'package:expenses_tracker/utils/currency_formatter.dart';
->>>>>>> origin/main
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
+
+enum SortOption {
+  newestFirst,
+  oldestFirst,
+  balanceDescending,
+}
 
 class ViewAllExpenses extends StatefulWidget {
   final List<Expense> expenses;
@@ -25,8 +27,9 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
   String searchQuery = '';
   bool isEditing = false;
 
+  SortOption sortOption = SortOption.newestFirst; // Mặc định
+
   Future<Expense?> _navigateToAddExpense(BuildContext context, Expense? e) {
-<<<<<<< HEAD
     return Navigator.push<Expense>(context, MaterialPageRoute(builder: (_) {
       return MultiBlocProvider(
         providers: [
@@ -41,28 +44,6 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
         child: AddExpense(expenseToEdit: e),
       );
     }));
-=======
-    return Navigator.push<Expense>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (context) => UpdateExpenseBloc(FirebaseExpenseRepo()),
-            ),
-            BlocProvider(
-              create: (context) => CreateExpenseBloc(FirebaseExpenseRepo()),
-            ),
-            BlocProvider(
-              create: (context) => GetCategoriesBloc(FirebaseExpenseRepo())
-                ..add(GetCategories()),
-            ),
-          ],
-          child: AddExpense(expenseToEdit: e),
-        ),
-      ),
-    );
->>>>>>> origin/main
   }
 
   @override
@@ -73,6 +54,43 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
               .contains(searchQuery.toLowerCase()) ||
           (e.note?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false);
     }).toList();
+
+    switch (sortOption) {
+      case SortOption.newestFirst:
+        filtered.sort((a, b) => b.date.compareTo(a.date));
+        break;
+      case SortOption.oldestFirst:
+        filtered.sort((a, b) => a.date.compareTo(b.date));
+        break;
+      case SortOption.balanceDescending:
+        filtered.sort((a, b) {
+          final aDate = DateFormat('dd/MM/yyyy').format(a.date);
+          final bDate = DateFormat('dd/MM/yyyy').format(b.date);
+
+          final aTotal = widget.expenses
+              .where((e) => DateFormat('dd/MM/yyyy').format(e.date) == aDate)
+              .fold<int>(
+                  0,
+                  (sum, e) =>
+                      sum +
+                      (e.category.type.name == 'income'
+                          ? e.amount
+                          : -e.amount));
+
+          final bTotal = widget.expenses
+              .where((e) => DateFormat('dd/MM/yyyy').format(e.date) == bDate)
+              .fold<int>(
+                  0,
+                  (sum, e) =>
+                      sum +
+                      (e.category.type.name == 'income'
+                          ? e.amount
+                          : -e.amount));
+
+          return bTotal.compareTo(aTotal); // số dư lớn hơn đứng trước
+        });
+        break;
+    }
 
     final Map<String, List<Expense>> grouped = {};
     for (var expense in filtered) {
@@ -112,14 +130,24 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Tất cả giao dịch'),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
           actions: [
-            TextButton(
-              onPressed: () => setState(() => isEditing = !isEditing),
-              child: Text(isEditing ? 'Xong' : 'Chỉnh sửa'),
+            PopupMenuButton<SortOption>(
+              onSelected: (value) => setState(() => sortOption = value),
+              icon: const Icon(Icons.sort),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: SortOption.newestFirst,
+                  child: Text('Mới → Cũ'),
+                ),
+                const PopupMenuItem(
+                  value: SortOption.oldestFirst,
+                  child: Text('Cũ → Mới'),
+                ),
+                const PopupMenuItem(
+                  value: SortOption.balanceDescending,
+                  child: Text('Số dư'),
+                ),
+              ],
             ),
           ],
         ),
@@ -145,7 +173,6 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                 children: grouped.entries.map((entry) {
                   final date = entry.key;
                   final expenses = entry.value;
-<<<<<<< HEAD
 
                   // Tính tổng tiền và số giao dịch trong ngày
                   final sum = expenses.fold<int>(0, (a, b) {
@@ -155,9 +182,6 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                   });
 
                   final numTransactions = expenses.length;
-=======
-                  final sum = expenses.fold<int>(0, (a, b) => a + b.amount);
->>>>>>> origin/main
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +195,6 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                             Text(date,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
-<<<<<<< HEAD
                             RichText(
                               text: TextSpan(
                                 text:
@@ -188,151 +211,117 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
                                 ],
                               ),
                             ),
-=======
-                            Text(formatSignedCurrency(sum),
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: getAmountColor(sum))),
->>>>>>> origin/main
                           ],
                         ),
                       ),
                       ...expenses.map((e) {
                         final iconData = IconMapper.getIcon(e.category.icon);
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
-                        return ListTile(
-                          onTap: () async {
-                            if (!isEditing) return;
-                            final updated =
-                                await _navigateToAddExpense(context, e);
-                            if (updated != null) {
-                              context
-                                  .read<UpdateExpenseBloc>()
-                                  .add(UpdateExpenseRequested(updated));
-                              setState(() {
-                                final index = widget.expenses.indexWhere(
-                                    (exp) =>
-                                        exp.expenseId == updated.expenseId);
-                                if (index != -1) {
-                                  widget.expenses[index] = updated;
-                                }
-                              });
+                        return Dismissible(
+                          key: Key(e.expenseId),
+                          background: Container(
+                            color: Colors.blue,
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: const Icon(Icons.edit, color: Colors.white),
+                          ),
+                          secondaryBackground: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child:
+                                const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          confirmDismiss: (direction) async {
+                            if (direction == DismissDirection.startToEnd) {
+                              // Vuốt trái → phải: Sửa
+                              final updated =
+                                  await _navigateToAddExpense(context, e);
+                              if (updated != null) {
+                                context
+                                    .read<UpdateExpenseBloc>()
+                                    .add(UpdateExpenseRequested(updated));
+                                setState(() {
+                                  final index = widget.expenses.indexWhere(
+                                      (exp) =>
+                                          exp.expenseId == updated.expenseId);
+                                  if (index != -1) {
+                                    widget.expenses[index] = updated;
+                                  }
+                                });
+                              }
+                              return false; // Không xóa
+                            } else {
+                              // Vuốt phải → trái: Xóa
+                              final result = await showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('Xác nhận'),
+                                  content: const Text(
+                                      'Bạn có chắc muốn xóa giao dịch này không?'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Huỷ')),
+                                    TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Xóa')),
+                                  ],
+                                ),
+                              );
+                              if (result == true) {
+                                context
+                                    .read<DeleteExpenseBloc>()
+                                    .add(DeleteExpenseRequested(e.expenseId));
+                                setState(() {
+                                  widget.expenses.remove(e);
+                                });
+                              }
+                              return result;
                             }
                           },
-                          leading: CircleAvatar(
-                            backgroundColor: e.category.color,
-                            radius: 24,
-                            child: iconData != null
-                                ? Icon(iconData,
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary)
-                                : null,
-                          ),
-                          title: Row(
-                            children: [
-                              Text(e.category.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
-                              if (e.note != null && e.note!.isNotEmpty)
-                                Text(' (${e.note})',
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: e.category.color,
+                              radius: 24,
+                              child: iconData != null
+                                  ? Icon(iconData,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary)
+                                  : null,
+                            ),
+                            title: Row(
+                              children: [
+                                Text(e.category.name,
                                     style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey)),
-                            ],
+                                        fontWeight: FontWeight.w600)),
+                                if (e.note != null && e.note!.isNotEmpty)
+                                  Text(' (${e.note})',
+                                      style: const TextStyle(
+                                          fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                            subtitle:
+                                Text(DateFormat('dd/MM/yyyy').format(e.date)),
+                            trailing: Text(
+                              '${e.category.type.name == 'income' ? '+' : '-'}${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: e.category.type.name == 'income'
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
                           ),
-                          subtitle:
-                              Text(DateFormat('dd/MM/yyyy').format(e.date)),
-                          trailing: isEditing
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () async {
-                                        final updated =
-                                            await _navigateToAddExpense(
-                                                context, e);
-                                        if (updated != null) {
-                                          context.read<UpdateExpenseBloc>().add(
-                                              UpdateExpenseRequested(updated));
-                                          setState(() {
-                                            final index = widget.expenses
-                                                .indexWhere((exp) =>
-                                                    exp.expenseId ==
-                                                    updated.expenseId);
-                                            if (index != -1) {
-                                              widget.expenses[index] = updated;
-                                            }
-                                          });
-                                        }
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () async {
-                                        final result = await showDialog(
-                                          context: context,
-                                          builder: (_) => AlertDialog(
-                                            title: const Text('Xác nhận'),
-                                            content: const Text(
-                                                'Bạn có chắc muốn xóa giao dịch này không?'),
-                                            actions: [
-                                              TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(
-                                                          context, false),
-                                                  child: const Text('Huỷ')),
-                                              TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(
-                                                          context, true),
-                                                  child: const Text('Xóa')),
-                                            ],
-                                          ),
-                                        );
-
-                                        if (result == true) {
-                                          context.read<DeleteExpenseBloc>().add(
-                                              DeleteExpenseRequested(
-                                                  e.expenseId));
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/main
-                                          setState(() {
-                                            widget.expenses.remove(e);
-                                          });
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                )
-<<<<<<< HEAD
-                              : Text(
-                                  '${e.category.type.name == 'income' ? '+' : '-'}${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: e.category.type.name == 'income'
-                                        ? Colors.green
-                                        : Colors.red,
-                                  ),
-                                ),
-=======
-                              : null,
->>>>>>> origin/main
                         );
                       }),
                     ],
                   );
                 }).toList(),
               ),
-<<<<<<< HEAD
             ),
-=======
-            )
->>>>>>> origin/main
           ],
         ),
       ),
