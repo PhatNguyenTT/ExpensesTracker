@@ -5,6 +5,7 @@ import 'package:expenses_tracker/screens/stats/chart/pie_chart_with_badge.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 import 'package:expenses_tracker/screens/stats/views/statsExpense.dart';
+import 'package:expenses_tracker/screens/stats/views/statsExpense_year.dart';
 
 class StatsScreen extends StatefulWidget {
   final List<Expense> expenses;
@@ -42,6 +43,21 @@ class _StatsScreenState extends State<StatsScreen> {
                   .copyWith(), // ⚠️ Clone category để tránh liên kết tham chiếu
             ))
         .toList();
+
+    final groupedExpenses = <String, Expense>{};
+
+    for (final e in filteredExpenses) {
+      final key = '${e.category.name}_${e.category.type}';
+      if (!groupedExpenses.containsKey(key)) {
+        groupedExpenses[key] = e.copyWith(amount: e.amount);
+      } else {
+        groupedExpenses[key] = groupedExpenses[key]!.copyWith(
+          amount: groupedExpenses[key]!.amount + e.amount,
+        );
+      }
+    }
+
+    final summaryExpenses = groupedExpenses.values.toList();
 
     return Scaffold(
       appBar: AppBar(toolbarHeight: 0),
@@ -128,86 +144,110 @@ class _StatsScreenState extends State<StatsScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
-                itemCount: filteredExpenses.length,
+                itemCount: summaryExpenses.length,
                 itemBuilder: (context, i) {
-                  final e = filteredExpenses[i];
+                  final e = summaryExpenses[i];
 
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => StatsExpenseScreen(
-                            expenses: widget.expenses,
-                            category: e.category,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: e.category.color,
-                                child: Icon(
-                                  IconMapper.getIcon(e.category.icon) ??
-                                      Icons.category,
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                  size: 20,
-                                ),
+                  return Material(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        if (selectedView == 0) {
+                          // Xem theo tháng
+                          final tappedMonth = selectedDate;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StatsExpenseScreen(
+                                expenses: widget.expenses,
+                                category: e.category,
+                                initialMonth: selectedView == 0
+                                    ? selectedDate
+                                    : null, // ✅
                               ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    e.category.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
+                            ),
+                          );
+                        } else {
+                          // Xem theo năm
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StatsExpenseYearScreen(
+                                expenses: widget.expenses,
+                                category: e.category,
+                                year: selectedDate.year,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: e.category.color,
+                                  child: Icon(
+                                    IconMapper.getIcon(e.category.icon) ??
+                                        Icons.category,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                    size: 20,
                                   ),
-                                  Text(
-                                    DateFormat('dd/MM/yyyy').format(e.date),
-                                    style: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.outline,
-                                    ),
-                                  ),
-                                  if (e.note != null && e.note!.isNotEmpty)
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      e.note!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
+                                      e.category.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Text(
-                            NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                                .format(e.amount),
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
+                                    if (e.note != null && e.note!.isNotEmpty)
+                                      Text(
+                                        e.note!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            Row(
+                              children: [
+                                Text(
+                                  NumberFormat.currency(
+                                          locale: 'vi_VN', symbol: '₫')
+                                      .format(e.amount),
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

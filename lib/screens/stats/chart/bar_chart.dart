@@ -24,7 +24,6 @@ class BarChartSample3 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const columnWidth = 65.0;
-
     return SizedBox(
       child: Row(
         children: [
@@ -46,78 +45,81 @@ class BarChartSample3 extends StatelessWidget {
           // ✅ Biểu đồ với scroll ngang
           Expanded(
             child: SingleChildScrollView(
+              // controller: scrollController,
               scrollDirection: Axis.horizontal,
-              reverse: true, // ✅ Đảm bảo hiển thị 5 tháng gần nhất
+              reverse: true,
               padding: const EdgeInsets.only(right: 10),
               child: SizedBox(
                 width: months.length * columnWidth,
-                child: GestureDetector(
-                  child: BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      maxY: _getMaxY(),
-                      gridData: const FlGridData(show: false),
-                      borderData: FlBorderData(show: false),
-                      barGroups: _generateBarGroups(context),
-                      barTouchData: BarTouchData(
-                        enabled: true,
-                        touchTooltipData: BarTouchTooltipData(
-                          tooltipPadding: const EdgeInsets.all(4),
-                          tooltipBgColor: Colors.black87,
-                          getTooltipItem: (
-                            BarChartGroupData group,
-                            int groupIndex,
-                            BarChartRodData rod,
-                            int rodIndex,
-                          ) {
-                            final date = months[group.x.toInt()];
-                            final amount = rod.toY;
-                            return BarTooltipItem(
-                              // '${DateFormat('MM/yyyy').format(date)}\n'
-                              '${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount)}',
-                              const TextStyle(color: Colors.white),
-                            );
-                          },
-                        ),
-                        touchCallback: (event, response) {
-                          if (event is FlTapUpEvent && response?.spot != null) {
-                            final index = response!.spot!.touchedBarGroupIndex;
-                            onBarTap?.call(index);
-                          }
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: _getMaxY(),
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barGroups: _generateBarGroups(context),
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        tooltipPadding: const EdgeInsets.all(4),
+                        tooltipBgColor: Colors.black87,
+                        direction: TooltipDirection.top,
+                        fitInsideVertically: true,
+                        getTooltipItem: (
+                          BarChartGroupData group,
+                          int groupIndex,
+                          BarChartRodData rod,
+                          int rodIndex,
+                        ) {
+                          final date = months[group.x.toInt()];
+                          final amount = rod.toY;
+                          return BarTooltipItem(
+                            NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                                .format(amount),
+                            const TextStyle(color: Colors.white),
+                          );
                         },
                       ),
-                      titlesData: FlTitlesData(
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 20,
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index < 0 || index >= months.length) {
-                                return const SizedBox.shrink();
-                              }
-                              final label =
-                                  DateFormat('MM/yy').format(months[index]);
-                              return SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                space: 4,
-                                child: Text(
-                                  label,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey,
-                                  ),
+                      touchCallback: (event, response) {
+                        if (event is FlTapUpEvent) {
+                          final touchX = event.localPosition.dx;
+                          final index =
+                              (touchX ~/ 65).clamp(0, months.length - 1);
+                          onBarTap?.call(index);
+                        }
+                      },
+                    ),
+                    titlesData: FlTitlesData(
+                      topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 20,
+                          getTitlesWidget: (value, meta) {
+                            final index = value.toInt();
+                            if (index < 0 || index >= months.length) {
+                              return const SizedBox.shrink();
+                            }
+                            final label =
+                                DateFormat('MM/yy').format(months[index]);
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              space: 4,
+                              child: Text(
+                                label,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -187,7 +189,9 @@ class BarChartSample3 extends StatelessWidget {
     if (values.isEmpty) return 100000;
 
     final maxValue = values.reduce((a, b) => a > b ? a : b).toDouble();
-    final rounded = ((maxValue * 1.25) / 100000).ceil() * 100000;
+
+    // ✅ Làm tròn lên mốc gần nhất 500.000đ để khớp trục Y
+    final rounded = ((maxValue + 499999) ~/ 500000) * 500000;
     return rounded.toDouble();
   }
 }

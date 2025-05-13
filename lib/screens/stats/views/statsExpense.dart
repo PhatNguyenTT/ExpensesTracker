@@ -7,11 +7,13 @@ import 'package:expenses_tracker/utils/icon_mapper.dart';
 class StatsExpenseScreen extends StatefulWidget {
   final List<Expense> expenses;
   final Category category;
+  final DateTime? initialMonth;
 
   const StatsExpenseScreen({
     super.key,
     required this.expenses,
     required this.category,
+    this.initialMonth,
   });
 
   @override
@@ -25,8 +27,15 @@ class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
   @override
   void initState() {
     super.initState();
-    months = _getLast12Months();
-    selectedIndex = months.length - 1;
+    months = _generateFullMonthsUpToLatestExpense();
+    if (widget.initialMonth != null) {
+      final i = months.indexWhere((m) =>
+          m.year == widget.initialMonth!.year &&
+          m.month == widget.initialMonth!.month);
+      selectedIndex = i >= 0 ? i : months.length - 1;
+    } else {
+      selectedIndex = months.length - 1;
+    }
   }
 
   List<DateTime> _getLast12Months() {
@@ -45,6 +54,36 @@ class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
             e.date.year == m.year &&
             e.date.month == m.month)
         .toList();
+  }
+
+  List<DateTime> _generateFullMonthsUpToLatestExpense() {
+    final filtered = widget.expenses
+        .where((e) => e.category.name == widget.category.name)
+        .toList();
+
+    if (filtered.isEmpty) {
+      final now = DateTime.now();
+      return List.generate(12, (i) {
+        final date = DateTime(now.year, now.month - (11 - i));
+        return DateTime(date.year, date.month);
+      });
+    }
+
+    // Tìm tháng xa nhất trong dữ liệu
+    filtered.sort((a, b) => a.date.compareTo(b.date));
+    final earliest = filtered.first.date;
+    final latest = filtered.last.date;
+
+    // Bắt đầu từ tháng đầu tiên của earliest đến cuối tháng của latest
+    final months = <DateTime>[];
+    DateTime current = DateTime(earliest.year, earliest.month);
+
+    while (current.isBefore(DateTime(latest.year, latest.month + 1))) {
+      months.add(current);
+      current = DateTime(current.year, current.month + 1);
+    }
+
+    return months;
   }
 
   @override
@@ -77,6 +116,26 @@ class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
                 selectedIndex: selectedIndex,
                 onBarTap: (i) => setState(() => selectedIndex = i),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tổng',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                      .format(total),
+                  style: const TextStyle(
+                    color: Colors.blueAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
           const Divider(),
