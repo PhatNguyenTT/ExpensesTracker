@@ -38,14 +38,6 @@ class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
     }
   }
 
-  List<DateTime> _getLast12Months() {
-    final now = DateTime.now();
-    return List.generate(12, (i) {
-      final date = DateTime(now.year, now.month - (11 - i));
-      return DateTime(date.year, date.month);
-    });
-  }
-
   List<Expense> _filterExpensesByMonth(int index) {
     final m = months[index];
     return widget.expenses
@@ -69,21 +61,29 @@ class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
       });
     }
 
-    // Tìm tháng xa nhất trong dữ liệu
+    // Sắp xếp theo thời gian
     filtered.sort((a, b) => a.date.compareTo(b.date));
     final earliest = filtered.first.date;
     final latest = filtered.last.date;
 
-    // Bắt đầu từ tháng đầu tiên của earliest đến cuối tháng của latest
-    final months = <DateTime>[];
-    DateTime current = DateTime(earliest.year, earliest.month);
+    final diffInMonths = (latest.year - earliest.year) * 12 +
+        (latest.month - earliest.month) +
+        1;
 
-    while (current.isBefore(DateTime(latest.year, latest.month + 1))) {
-      months.add(current);
-      current = DateTime(current.year, current.month + 1);
+    // Trường hợp dữ liệu nằm trong khoảng < 12 tháng → thêm đủ 12 tháng
+    if (diffInMonths < 12) {
+      final startMonth = DateTime(latest.year, latest.month - 11);
+      return List.generate(12, (i) {
+        final m = DateTime(startMonth.year, startMonth.month + i);
+        return DateTime(m.year, m.month);
+      });
     }
 
-    return months;
+    // Ngược lại: hiển thị từ tháng đầu đến tháng cuối có dữ liệu
+    return List.generate(diffInMonths, (i) {
+      final m = DateTime(earliest.year, earliest.month + i);
+      return DateTime(m.year, m.month);
+    });
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:expense_repository/expense_repository.dart';
 import 'package:expenses_tracker/screens/stats/chart/bar_chart_year.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
+import 'package:expenses_tracker/screens/stats/views/statsExpense.dart';
 
 class StatsExpenseYearScreen extends StatefulWidget {
   final List<Expense> expenses;
@@ -124,14 +125,42 @@ class _StatsExpenseYearScreenState extends State<StatsExpenseYearScreen> {
                 final monthTotal = _totalsPerMonth()[i];
                 return ListTile(
                   title: Text(monthLabel),
-                  trailing: Text(
-                    NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                        .format(monthTotal),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  trailing: monthTotal == 0
+                      ? Text(
+                          NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                              .format(monthTotal),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              NumberFormat.currency(
+                                      locale: 'vi_VN', symbol: '₫')
+                                  .format(monthTotal),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.chevron_right, color: Colors.grey),
+                          ],
+                        ),
                   onTap: monthTotal == 0
                       ? null
-                      : () => setState(() => selectedMonthIndex = i),
+                      : () {
+                          setState(() => selectedMonthIndex = i);
+                          final selectedMonth = DateTime(widget.year, i + 1);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StatsExpenseScreen(
+                                expenses: widget.expenses,
+                                category: widget.category,
+                                initialMonth: selectedMonth,
+                              ),
+                            ),
+                          );
+                        },
                 );
               },
             ),

@@ -61,7 +61,7 @@ class MainScreen extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.outline)),
-                      Text("Bao Yen",
+                      Text("Admin",
                           style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
