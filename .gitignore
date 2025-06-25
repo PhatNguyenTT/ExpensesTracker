@@ -43,3 +43,39 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Node.js (if accidentally added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+package.json
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Documentation files (temporary)
+*.md.backup
+SUMMARY_SYSTEM.md
+DATA_SEEDER_GUIDE.md

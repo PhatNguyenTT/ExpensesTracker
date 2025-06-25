@@ -15,16 +15,12 @@ import 'package:expenses_tracker/utils/icon_mapper.dart';
 
 class MainScreen extends StatelessWidget {
   final List<Expense> expenses;
-  final int incomeTotal;
-  final int expenseTotal;
-  final int balance;
+  final OverallSummary overallSummary;
 
   const MainScreen(
     this.expenses, {
     super.key,
-    required this.incomeTotal,
-    required this.expenseTotal,
-    required this.balance,
+    required this.overallSummary,
   });
 
   @override
@@ -108,7 +104,7 @@ class MainScreen extends StatelessWidget {
                         fontSize: 16,
                         color: Colors.white)),
                 const SizedBox(height: 13),
-                Text(formatSignedCurrency(balance),
+                Text(formatSignedCurrency(overallSummary.balance),
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 25,
@@ -137,7 +133,9 @@ class MainScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w400,
                                       fontSize: 12,
                                       color: Colors.white)),
-                              Text(formatSignedCurrency(incomeTotal),
+                              Text(
+                                  formatSignedCurrency(
+                                      overallSummary.totalIncome),
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
@@ -164,7 +162,9 @@ class MainScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w400,
                                       fontSize: 12,
                                       color: Colors.white)),
-                              Text(formatSignedCurrency(expenseTotal),
+                              Text(
+                                  formatSignedCurrency(
+                                      overallSummary.totalExpense),
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
