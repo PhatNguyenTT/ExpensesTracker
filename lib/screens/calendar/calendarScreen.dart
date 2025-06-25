@@ -15,9 +15,31 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    with TickerProviderStateMixin {
   DateTime selectedDay = DateTime.now();
   DateTime focusedDay = DateTime.now();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   // Hàm lấy chi tiêu theo ngày đã chọn
   List<Expense> getExpensesForDay(DateTime day) {
@@ -51,137 +73,440 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final totalBalance = monthlyIncome - monthlyExpense;
 
     return Scaffold(
-      appBar: AppBar(toolbarHeight: 0),
-      body: Padding(
-        padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top), // // Đẩy lên đúng vị trí
-        child: Column(
-          children: [
-            // // Tiêu đề và nút tìm kiếm
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            //   child: Row(
-            //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //     children: [
-            //       const Text(
-            //         'Lịch',
-            //         style: TextStyle(
-            //           fontSize: 24,
-            //           fontWeight: FontWeight.bold,
-            //         ),
-            //       ),
-            //       IconButton(
-            //         icon: const Icon(Icons.search),
-            //         onPressed: () {
-            //           // Thực hiện chức năng tìm kiếm ở đây
-            //         },
-            //       ),
-            //     ],
-            //   ),
-            // ),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        toolbarHeight: 0,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              // Header với title và date info
+              _buildHeader(),
 
-            // Custom Table Calendar
-            CustomTableCalendar(
-              focusedDay: focusedDay,
-              selectedDay: selectedDay,
-              expenses: widget.expenses,
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  this.selectedDay = selectedDay;
-                  this.focusedDay = focusedDay;
-                });
-              },
-              onPageChanged: (focusedDay) {
-                setState(() {
-                  this.focusedDay = focusedDay;
-                });
-              },
-            ),
+              // Custom Calendar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Card(
+                  elevation: 8,
+                  shadowColor: Colors.black12,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CustomTableCalendar(
+                      focusedDay: focusedDay,
+                      selectedDay: selectedDay,
+                      expenses: widget.expenses,
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() {
+                          this.selectedDay = selectedDay;
+                          this.focusedDay = focusedDay;
+                        });
+                        _animationController.reset();
+                        _animationController.forward();
+                      },
+                      onPageChanged: (focusedDay) {
+                        setState(() {
+                          this.focusedDay = focusedDay;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
 
-            // Tóm tắt thu nhập, chi tiêu, tổng
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSummaryCard('Thu nhập', monthlyIncome, Colors.green),
-                _buildSummaryCard('Chi tiêu', monthlyExpense, Colors.red),
-                _buildSummaryCard('Tổng', totalBalance, Colors.blue),
-              ],
-            ),
+              const SizedBox(height: 20),
 
-            // Liệt kê chi tiêu theo ngày đã chọn
-            Expanded(
-              child: ListView.builder(
-                itemCount: expensesForSelectedDay.length,
-                shrinkWrap:
-                    true, // Đảm bảo rằng ListView không chiếm quá nhiều không gian
-                physics:
-                    const AlwaysScrollableScrollPhysics(), // Đảm bảo ListView luôn cuộn được
-                itemBuilder: (context, index) {
-                  final expense = expensesForSelectedDay[index];
-                  Color itemColor;
+              // Summary Cards với gradient và animation
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: _buildSummarySection(
+                    monthlyIncome, monthlyExpense, totalBalance),
+              ),
 
-                  // Đặt màu cho giao dịch thu nhập (màu xanh) và chi tiêu (màu trắng)
-                  if (expense.category.type == tt.TransactionType.income) {
-                    itemColor = Colors.green; // Thu nhập sẽ có màu xanh
-                  } else if (expense.category.type ==
-                      tt.TransactionType.expense) {
-                    itemColor = Colors.red; // Chi tiêu sẽ có màu trắng
-                  } else {
-                    itemColor =
-                        Colors.black; // Mặc định, nếu có loại giao dịch khác
-                  }
+              const SizedBox(height: 20),
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.category,
-                        color: expense.category.color,
+              // Header cho danh sách giao dịch
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blue.shade200),
                       ),
-                      title: Text(expense.category.name),
-                      subtitle: Text(
-                        DateFormat('dd/MM/yyyy').format(expense.date),
-                      ),
-                      trailing: Text(
-                        formatSignedCurrency(expense.amount),
+                      child: Text(
+                        DateFormat('dd/MM/yyyy').format(selectedDay),
                         style: TextStyle(
-                          color:
-                              itemColor, // Sử dụng màu cho từng loại giao dịch
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
-                  );
-                },
+                    const Spacer(),
+                    Text(
+                      '${expensesForSelectedDay.length} giao dịch',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )
-          ],
+
+              const SizedBox(height: 12),
+
+              // Danh sách giao dịch với animation và height cố định để scroll
+              Container(
+                height: 400, // Chiều cao cố định cho danh sách giao dịch
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: expensesForSelectedDay.isEmpty
+                      ? _buildEmptyState()
+                      : _buildExpensesList(expensesForSelectedDay),
+                ),
+              ),
+
+              const SizedBox(
+                  height: 20), // Khoảng cách cuối để tránh cắt nội dung
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Hàm hỗ trợ để tạo các card tóm tắt thu nhập, chi tiêu, tổng
-  Widget _buildSummaryCard(String title, int amount, Color color) {
-    return Card(
-      color: color.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-            // const SizedBox(height: 2),
-            Text(
-              formatSignedCurrency(amount),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color,
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Row(
+        children: [
+          Text(
+            'Lịch',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () {
+              _showSearchDialog();
+            },
+            icon: Icon(
+              Icons.search_rounded,
+              color: Colors.grey.shade600,
+              size: 24,
+            ),
+            tooltip: 'Tìm kiếm giao dịch',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.search_rounded, color: Colors.blue.shade600),
+              const SizedBox(width: 8),
+              const Text('Tìm kiếm giao dịch'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Nhập tên giao dịch...',
+                  prefixIcon: Icon(Icons.text_fields_rounded,
+                      color: Colors.grey.shade500),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blue.shade400),
+                  ),
+                ),
+                onChanged: (value) {
+                  // TODO: Implement search logic
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tính năng tìm kiếm sẽ được phát triển trong phiên bản tiếp theo.',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Đóng',
+                style: TextStyle(color: Colors.blue.shade600),
               ),
             ),
           ],
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSummarySection(
+      int monthlyIncome, int monthlyExpense, int totalBalance) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildModernSummaryCard(
+              'Thu nhập',
+              monthlyIncome,
+              [Colors.green.shade400, Colors.green.shade600],
+              Icons.trending_up_rounded,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildModernSummaryCard(
+              'Chi tiêu',
+              monthlyExpense,
+              [Colors.red.shade400, Colors.red.shade600],
+              Icons.trending_down_rounded,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildModernSummaryCard(
+              'Số dư',
+              totalBalance,
+              totalBalance >= 0
+                  ? [Colors.blue.shade400, Colors.blue.shade600]
+                  : [Colors.orange.shade400, Colors.orange.shade600],
+              totalBalance >= 0
+                  ? Icons.account_balance_wallet_rounded
+                  : Icons.warning_rounded,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildModernSummaryCard(
+      String title, int amount, List<Color> gradientColors, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors[0].withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.white.withOpacity(0.9), size: 20),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.arrow_upward_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              formatSignedCurrency(amount.abs()),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.event_note_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Không có giao dịch',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Chưa có giao dịch nào trong ngày này',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpensesList(List<Expense> expenses) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: expenses.length,
+      itemBuilder: (context, index) {
+        final expense = expenses[index];
+        final isIncome = expense.category.type == tt.TransactionType.income;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isIncome ? Colors.green.shade50 : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isIncome
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
+                color: isIncome ? Colors.green.shade600 : Colors.red.shade600,
+                size: 20,
+              ),
+            ),
+            title: Text(
+              expense.category.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: expense.note != null && expense.note!.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      expense.note!,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
+                : null,
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${isIncome ? '+' : '-'}${formatSignedCurrency(expense.amount)}',
+                  style: TextStyle(
+                    color:
+                        isIncome ? Colors.green.shade600 : Colors.red.shade600,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  DateFormat('HH:mm').format(expense.date),
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -6,6 +6,14 @@ abstract class ExpenseRepository {
 
   Future<List<Category>> getCategory();
 
+  Future<void> updateCategory(Category category);
+
+  Future<void> deleteCategory(String categoryId);
+
+  Future<bool> isCategoryInUse(String categoryId);
+
+  Future<List<Expense>> getExpensesByCategory(String categoryId);
+
   // ========== EXPENSE OPERATIONS ==========
   Future<void> createExpense(Expense expense);
 

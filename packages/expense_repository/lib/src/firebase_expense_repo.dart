@@ -46,6 +46,84 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     }
   }
 
+  @override
+  Future<void> updateCategory(Category category) async {
+    try {
+      await categoryCollection
+          .doc(category.categoryId)
+          .update(category.toEntity().toDocument());
+    } catch (e) {
+      log(e.toString());
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> isCategoryInUse(String categoryId) async {
+    try {
+      final snapshot = await expenseCollection
+          .where('category.categoryId', isEqualTo: categoryId)
+          .limit(1)
+          .get();
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      log(e.toString());
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Expense>> getExpensesByCategory(String categoryId) async {
+    try {
+      final snapshot = await expenseCollection
+          .where('category.categoryId', isEqualTo: categoryId)
+          .get();
+      return snapshot.docs
+          .map((doc) =>
+              Expense.fromEntity(ExpenseEntity.fromDocument(doc.data())))
+          .toList();
+    } catch (e) {
+      log(e.toString());
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteCategory(String categoryId) async {
+    try {
+      log('🗑️ Attempting to delete category: $categoryId');
+
+      // 1. Kiểm tra xem category có đang được sử dụng không
+      final isInUse = await isCategoryInUse(categoryId);
+      if (isInUse) {
+        log('❌ Cannot delete category: still in use by expenses');
+        throw Exception(
+            'Category đang được sử dụng bởi các giao dịch. Vui lòng xóa các giao dịch liên quan trước.');
+      }
+
+      // 2. Xóa tất cả category summaries liên quan
+      final categorySummariesSnapshot = await categorySummaryCollection
+          .where('categoryId', isEqualTo: categoryId)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in categorySummariesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 3. Xóa category
+      batch.delete(categoryCollection.doc(categoryId));
+
+      // 4. Commit batch operation
+      await batch.commit();
+
+      log('✅ Successfully deleted category and related summaries');
+    } catch (e) {
+      log('❌ Error deleting category: $e');
+      rethrow;
+    }
+  }
+
   // ========== EXPENSE OPERATIONS ==========
   @override
   Future<void> createExpense(Expense expense) async {
