@@ -9,7 +9,14 @@ sealed class UpdateCategoryState extends Equatable {
 
 final class UpdateCategoryInitial extends UpdateCategoryState {}
 
-final class UpdateCategoryFailure extends UpdateCategoryState {}
+final class UpdateCategoryFailure extends UpdateCategoryState {
+  final String message;
+
+  const UpdateCategoryFailure({required this.message});
+
+  @override
+  List<Object> get props => [message];
+}
 
 final class UpdateCategoryLoading extends UpdateCategoryState {}
 

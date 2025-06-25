@@ -16,7 +16,7 @@ class UpdateCategoryBloc
         await expenseRepository.updateCategory(event.category);
         emit(UpdateCategorySuccess());
       } catch (e) {
-        emit(UpdateCategoryFailure());
+        emit(UpdateCategoryFailure(message: e.toString()));
       }
     });
   }

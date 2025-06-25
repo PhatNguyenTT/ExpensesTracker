@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:expense_repository/expense_repository.dart';
 import 'package:expenses_tracker/screens/stats/chart/bar_chart.dart'; // BarChartSample3
 import 'package:expenses_tracker/utils/icon_mapper.dart';
+import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 
 class StatsExpenseScreen extends StatefulWidget {
   final List<Expense> expenses;
@@ -21,47 +22,47 @@ class StatsExpenseScreen extends StatefulWidget {
 }
 
 class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
-  late List<DateTime> months;
-  late int selectedIndex;
+  late List<DateTime> _months;
+  late int _selectedIndex;
+  late List<Expense> _filteredExpenses;
+  late double _totalAmount;
 
   @override
   void initState() {
     super.initState();
-    months = _generateFullMonthsUpToLatestExpense();
+    _months = _generateFullMonthsUpToLatestExpense();
     if (widget.initialMonth != null) {
-      final i = months.indexWhere((m) =>
+      final i = _months.indexWhere((m) =>
           m.year == widget.initialMonth!.year &&
           m.month == widget.initialMonth!.month);
-      selectedIndex = i >= 0 ? i : months.length - 1;
+      _selectedIndex = i >= 0 ? i : _months.length - 1;
     } else {
-      selectedIndex = months.length - 1;
+      _selectedIndex = _months.length - 1;
     }
+    _updateFilteredData();
   }
 
-  List<Expense> _filterExpensesByMonth(int index) {
-    final m = months[index];
-    return widget.expenses
+  void _updateFilteredData() {
+    final selectedMonth = _months[_selectedIndex];
+    _filteredExpenses = widget.expenses
         .where((e) =>
-            e.category.name == widget.category.name &&
-            e.date.year == m.year &&
-            e.date.month == m.month)
+            e.category.categoryId == widget.category.categoryId &&
+            e.date.year == selectedMonth.year &&
+            e.date.month == selectedMonth.month)
         .toList();
+    _totalAmount = _filteredExpenses.fold(0, (sum, e) => sum + e.amount);
   }
 
   List<DateTime> _generateFullMonthsUpToLatestExpense() {
     final filtered = widget.expenses
-        .where((e) => e.category.name == widget.category.name)
+        .where((e) => e.category.categoryId == widget.category.categoryId)
         .toList();
 
     if (filtered.isEmpty) {
       final now = DateTime.now();
-      return List.generate(12, (i) {
-        final date = DateTime(now.year, now.month - (11 - i));
-        return DateTime(date.year, date.month);
-      });
+      return List.generate(12, (i) => DateTime(now.year, now.month - (11 - i)));
     }
 
-    // Sắp xếp theo thời gian
     filtered.sort((a, b) => a.date.compareTo(b.date));
     final earliest = filtered.first.date;
     final latest = filtered.last.date;
@@ -70,115 +71,163 @@ class _StatsExpenseScreenState extends State<StatsExpenseScreen> {
         (latest.month - earliest.month) +
         1;
 
-    // Trường hợp dữ liệu nằm trong khoảng < 12 tháng → thêm đủ 12 tháng
-    if (diffInMonths < 12) {
-      final startMonth = DateTime(latest.year, latest.month - 11);
-      return List.generate(12, (i) {
-        final m = DateTime(startMonth.year, startMonth.month + i);
-        return DateTime(m.year, m.month);
-      });
-    }
+    final startMonth =
+        diffInMonths < 12 ? DateTime(latest.year, latest.month - 11) : earliest;
+    final count = diffInMonths < 12 ? 12 : diffInMonths;
 
-    // Ngược lại: hiển thị từ tháng đầu đến tháng cuối có dữ liệu
-    return List.generate(diffInMonths, (i) {
-      final m = DateTime(earliest.year, earliest.month + i);
-      return DateTime(m.year, m.month);
-    });
+    return List.generate(
+        count, (i) => DateTime(startMonth.year, startMonth.month + i));
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentMonth = months[selectedIndex];
-    final filtered = _filterExpensesByMonth(selectedIndex);
-    final total = filtered.fold<int>(0, (a, b) => a + b.amount);
-
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text(
-          '${widget.category.name} (T${currentMonth.month}/${currentMonth.year}) '
-          '${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(total)}',
-        ),
+        backgroundColor: Colors.grey[100],
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.category.name,
+          style: const TextStyle(
+              color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 300,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: BarChartSample3(
-                expenses: widget.expenses,
-                category: widget.category,
-                months: months,
-                selectedIndex: selectedIndex,
-                onBarTap: (i) => setState(() => selectedIndex = i),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
-            child: Row(
+          _buildChartCard(),
+          const SizedBox(height: 16),
+          _buildTransactionList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          )
+        ],
+      ),
+      height: 300,
+      child: BarChartSample3(
+        expenses: widget.expenses,
+        category: widget.category,
+        months: _months,
+        selectedIndex: _selectedIndex,
+        onBarTap: (i) {
+          setState(() {
+            _selectedIndex = i;
+            _updateFilteredData();
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildTransactionList() {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Tổng',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  'Giao dịch',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                      .format(total),
-                  style: const TextStyle(
-                    color: Colors.blueAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Tổng: ${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(_totalAmount)}',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700]),
                 ),
               ],
             ),
+            const Divider(height: 24),
+            Expanded(
+              child: _filteredExpenses.isEmpty
+                  ? const Center(
+                      child: Text('Không có giao dịch trong tháng này.'))
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: _filteredExpenses.length,
+                      itemBuilder: (context, index) {
+                        final e = _filteredExpenses[index];
+                        return _buildTransactionTile(e);
+                      },
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionTile(Expense e) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: e.category.color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              IconMapper.getIcon(e.category.icon),
+              color: e.category.color,
+              size: 20,
+            ),
           ),
-          const Divider(),
+          const SizedBox(width: 12),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(child: Text('Không có giao dịch'))
-                : ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final e = filtered[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: e.category.color,
-                          child: Icon(
-                            IconMapper.getIcon(e.category.icon),
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
-                        title: Text(e.category.name),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(DateFormat('dd/MM/yyyy').format(e.date)),
-                            if (e.note != null && e.note!.isNotEmpty)
-                              Text(
-                                e.note!,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                          ],
-                        ),
-                        trailing: Text(
-                          '${e.category.type.name == 'income' ? '+' : '-'}'
-                          '${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: e.category.type.name == 'income'
-                                ? Colors.green
-                                : Colors.red,
-                          ),
-                        ),
-                      );
-                    },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('EEEE, dd/MM/yyyy', 'vi_VN').format(e.date),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                if (e.note != null && e.note!.isNotEmpty)
+                  Text(
+                    e.note!,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
+              ],
+            ),
+          ),
+          Text(
+            '${e.category.type == tt.TransactionType.income ? '+' : '-'}${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(e.amount)}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: e.category.type == tt.TransactionType.income
+                  ? Colors.green
+                  : Colors.red,
+            ),
           ),
         ],
       ),

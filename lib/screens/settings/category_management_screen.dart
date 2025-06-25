@@ -121,20 +121,49 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         ),
         body: MultiBlocListener(
           listeners: [
+            // Create Category Listener
             BlocListener<CreateCategoryBloc, CreateCategoryState>(
               listener: (context, state) {
                 if (state is CreateCategorySuccess) {
                   context.read<GetCategoriesBloc>().add(GetCategories());
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tạo danh mục thành công'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else if (state is CreateCategoryFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Có lỗi xảy ra khi tạo danh mục'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               },
             ),
+            // Update Category Listener
             BlocListener<UpdateCategoryBloc, UpdateCategoryState>(
               listener: (context, state) {
                 if (state is UpdateCategorySuccess) {
                   context.read<GetCategoriesBloc>().add(GetCategories());
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Cập nhật danh mục thành công'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else if (state is UpdateCategoryFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi cập nhật: ${state.message}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               },
             ),
+            // Delete Category Listener
             BlocListener<DeleteCategoryBloc, DeleteCategoryState>(
               listener: (context, state) {
                 if (state is DeleteCategorySuccess) {
@@ -148,12 +177,11 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
                 } else if (state is DeleteCategoryFailure) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(state.message
-                              .contains('Category đang được sử dụng')
-                          ? 'Không thể xóa danh mục. Danh mục đang được sử dụng bởi các giao dịch.'
-                          : 'Có lỗi xảy ra: ${state.message}'),
+                      content: Text(
+                          state.message.contains('Category đang được sử dụng')
+                              ? 'Danh mục đang được sử dụng, không thể xóa'
+                              : 'Lỗi xóa: ${state.message}'),
                       backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 4),
                     ),
                   );
                 }
@@ -163,25 +191,48 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildCategoryList(TransactionType.expense),
-              _buildCategoryList(TransactionType.income),
+              CategoryListTab(
+                  type: TransactionType.expense, isEditMode: isEditMode),
+              CategoryListTab(
+                  type: TransactionType.income, isEditMode: isEditMode),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildCategoryList(TransactionType type) {
+class CategoryListTab extends StatelessWidget {
+  final TransactionType type;
+  final bool isEditMode;
+
+  const CategoryListTab({
+    super.key,
+    required this.type,
+    required this.isEditMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<GetCategoriesBloc, GetCategoriesState>(
       builder: (context, state) {
+        if (state is GetCategoriesLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is GetCategoriesFailure) {
+          return const Center(child: Text('Có lỗi xảy ra'));
+        }
+
         if (state is GetCategoriesSuccess) {
-          final filteredCategories =
-              state.categories.where((cat) => cat.type == type).toList();
+          final filteredCategories = state.categories
+              .where((category) => category.type == type)
+              .toList();
 
           return Column(
             children: [
-              // Nút "Thêm danh mục"
+              // Add Category Button
               if (!isEditMode)
                 Container(
                   width: double.infinity,
@@ -194,125 +245,76 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.grey[300]!),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'Thêm danh mục',
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          Text('Thêm danh mục'),
                           SizedBox(width: 8),
-                          Icon(
-                            Icons.chevron_right,
-                            color: Colors.grey,
-                          ),
+                          Icon(Icons.chevron_right, color: Colors.grey),
                         ],
                       ),
                     ),
                   ),
                 ),
 
-              // Danh sách categories
+              // Categories List
               Expanded(
-                child: isEditMode
-                    ? _buildReorderableList(filteredCategories, type)
-                    : _buildNormalList(filteredCategories),
+                child: ListView.builder(
+                  itemCount: filteredCategories.length,
+                  itemBuilder: (context, index) {
+                    final category = filteredCategories[index];
+                    return CategoryListItem(
+                      category: category,
+                      isEditMode: isEditMode,
+                    );
+                  },
+                ),
               ),
             ],
           );
-        } else if (state is GetCategoriesLoading) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.blue),
-          );
-        } else {
-          return const Center(
-            child: Text(
-              'Có lỗi xảy ra',
-              style: TextStyle(color: Colors.black87),
-            ),
-          );
         }
+
+        return const SizedBox();
       },
     );
   }
 
-  Widget _buildNormalList(List<Category> categories) {
-    return ListView.builder(
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return _buildCategoryItem(category, false);
-      },
-    );
+  Future<void> _showAddCategoryDialog(
+      BuildContext context, TransactionType type) async {
+    final newCategory = await getCategoryCreation(context, type);
+    if (newCategory != null && context.mounted) {
+      context.read<CreateCategoryBloc>().add(CreateCategory(newCategory));
+    }
   }
+}
 
-  Widget _buildReorderableList(
-      List<Category> categories, TransactionType type) {
-    return ReorderableListView.builder(
-      itemCount: categories.length,
-      onReorder: (oldIndex, newIndex) {
-        setState(() {
-          if (newIndex > oldIndex) {
-            newIndex -= 1;
-          }
-          final item = categories.removeAt(oldIndex);
-          categories.insert(newIndex, item);
-        });
-        // TODO: Implement API call to update order
-      },
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return _buildCategoryItem(category, true,
-            key: Key(category.categoryId));
-      },
-    );
-  }
+class CategoryListItem extends StatelessWidget {
+  final Category category;
+  final bool isEditMode;
 
-  Widget _buildCategoryItem(Category category, bool isEditMode, {Key? key}) {
+  const CategoryListItem({
+    super.key,
+    required this.category,
+    required this.isEditMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      key: key,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
-        onTap: () => _showEditCategoryDialog(context, category),
+        onTap: isEditMode ? null : () => _navigateToEditScreen(context),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[300]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: Row(
             children: [
-              // Drag handle cho edit mode
-              if (isEditMode) ...[
-                Icon(
-                  Icons.drag_handle,
-                  color: Colors.grey[400],
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-              ],
-
-              // Category Icon
+              // Icon
               Container(
                 width: 32,
                 height: 32,
@@ -328,39 +330,79 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
               ),
               const SizedBox(width: 16),
 
-              // Category Name
+              // Name
               Expanded(
                 child: Text(
                   category.name,
                   style: const TextStyle(
-                    color: Colors.black87,
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
               ),
 
+              // Actions
               if (isEditMode) ...[
-                // Delete button trong edit mode
                 IconButton(
-                  onPressed: () => _showDeleteCategoryDialog(context, category),
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                    size: 20,
-                  ),
+                  onPressed: () => _showDeleteDialog(context),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
                 ),
               ] else ...[
-                // Arrow icon cho normal mode
-                const Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey,
-                  size: 20,
-                ),
+                const Icon(Icons.chevron_right, color: Colors.grey),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _navigateToEditScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(
+              value: context.read<GetCategoriesBloc>(),
+            ),
+            BlocProvider(
+              create: (_) => UpdateCategoryBloc(
+                context.read<GetCategoriesBloc>().expenseRepository,
+              ),
+            ),
+          ],
+          child: CategoryEditScreen(category: category),
+        ),
+      ),
+    ).then((_) {
+      // Refresh list after returning
+      context.read<GetCategoriesBloc>().add(GetCategories());
+    });
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xóa danh mục'),
+        content: Text('Bạn có chắc muốn xóa danh mục "${category.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context
+                  .read<DeleteCategoryBloc>()
+                  .add(DeleteCategory(category.categoryId));
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -387,135 +429,8 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         return Icons.card_giftcard;
       case 'investment':
         return Icons.trending_up;
-      case 'freelance':
-        return Icons.computer;
-      case 'gas':
-        return Icons.local_gas_station;
-      case 'phone':
-        return Icons.phone;
-      case 'electric':
-        return Icons.electrical_services;
-      case 'water':
-        return Icons.water_drop;
-      case 'cosmetics':
-        return Icons.face_retouching_natural;
-      case 'clothes':
-        return Icons.checkroom;
-      case 'social':
-        return Icons.people;
       default:
         return Icons.category;
     }
-  }
-
-  Future<void> _showAddCategoryDialog(
-      BuildContext context, TransactionType type) async {
-    final newCategory = await getCategoryCreation(context, type);
-    if (newCategory != null) {
-      context.read<CreateCategoryBloc>().add(CreateCategory(newCategory));
-    }
-  }
-
-  Future<void> _showEditCategoryDialog(
-      BuildContext context, Category category) async {
-    final editedCategory = await getCategoryEdit(context, category);
-    if (editedCategory != null) {
-      context.read<UpdateCategoryBloc>().add(UpdateCategory(editedCategory));
-    }
-  }
-
-  void _showDeleteCategoryDialog(BuildContext context, Category category) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.orange,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Xóa danh mục',
-              style: TextStyle(color: Colors.black87),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(color: Colors.black54, fontSize: 16),
-                children: [
-                  const TextSpan(text: 'Bạn có chắc chắn muốn xóa danh mục '),
-                  TextSpan(
-                    text: '"${category.name}"',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const TextSpan(text: '?'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.orange,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Nếu danh mục đang được sử dụng bởi các giao dịch, bạn cần xóa các giao dịch đó trước.',
-                      style: TextStyle(
-                        color: Colors.orange.shade700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'Hủy',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context
-                  .read<DeleteCategoryBloc>()
-                  .add(DeleteCategory(category.categoryId));
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Xóa'),
-          ),
-        ],
-      ),
-    );
   }
 }

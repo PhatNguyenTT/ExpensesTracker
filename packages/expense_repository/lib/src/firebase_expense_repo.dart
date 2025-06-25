@@ -53,7 +53,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
           .doc(category.categoryId)
           .update(category.toEntity().toDocument());
     } catch (e) {
-      log(e.toString());
+      log('Error updating category: $e');
       rethrow;
     }
   }
