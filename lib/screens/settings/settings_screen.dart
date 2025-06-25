@@ -11,7 +11,7 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
-          'Khác',
+          'Cài đặt',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,

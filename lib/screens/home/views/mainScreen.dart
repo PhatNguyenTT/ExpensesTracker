@@ -25,6 +25,12 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sắp xếp giao dịch một lần và chỉ lấy 3 giao dịch gần nhất
+    final recentExpenses = (List<Expense>.from(expenses)
+          ..sort((a, b) => b.date.compareTo(a.date)))
+        .take(3)
+        .toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 0),
       child: Column(
@@ -186,7 +192,7 @@ class MainScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Giao dịch',
+                'Giao dịch gần đây',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -226,12 +232,9 @@ class MainScreen extends StatelessWidget {
           const SizedBox(height: 20),
           Expanded(
             child: ListView.builder(
-              itemCount: expenses.length,
+              itemCount: recentExpenses.length,
               itemBuilder: (context, int i) {
-                // 🔁 Copy danh mục để tránh dùng chung tham chiếu
-                final expense = expenses[i].copyWith(
-                  category: expenses[i].category.copyWith(),
-                );
+                final expense = recentExpenses[i];
                 final iconData = IconMapper.getIcon(expense.category.icon);
 
                 return Padding(

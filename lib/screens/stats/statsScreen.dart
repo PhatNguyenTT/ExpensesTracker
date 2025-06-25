@@ -67,28 +67,18 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.grey[100],
-        elevation: 0,
-        title: const Text(
-          'Thống kê',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _filteredExpenses.isEmpty
+                  ? _buildEmptyState()
+                  : _buildContent(),
+            ),
+          ],
         ),
-      ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _filteredExpenses.isEmpty
-                ? _buildEmptyState()
-                : _buildContent(),
-          ),
-        ],
       ),
     );
   }

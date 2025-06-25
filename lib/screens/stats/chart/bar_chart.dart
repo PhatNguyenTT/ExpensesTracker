@@ -25,168 +25,136 @@ class BarChartSample3 extends StatefulWidget {
 }
 
 class _BarChartSample3State extends State<BarChartSample3> {
-  final double columnWidth = 65.0;
-  final ScrollController scrollController = ScrollController();
+  final double _columnWidth = 24.0;
+  final double _columnSpacing = 20.0;
+  final ScrollController _scrollController = ScrollController();
+  List<double> _monthlyTotals = [];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final target = (widget.selectedIndex + 0.5) * columnWidth -
-          MediaQuery.of(context).size.width / 2;
-      final safeTarget =
-          target.clamp(0.0, scrollController.position.maxScrollExtent);
-      scrollController.jumpTo(safeTarget);
-    });
+    _calculateMonthlyTotals();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _scrollToSelectedIndex());
+  }
+
+  @override
+  void didUpdateWidget(BarChartSample3 oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.expenses != oldWidget.expenses ||
+        widget.months != oldWidget.months ||
+        widget.category != oldWidget.category) {
+      _calculateMonthlyTotals();
+    }
+    if (widget.selectedIndex != oldWidget.selectedIndex) {
+      _scrollToSelectedIndex();
+    }
+  }
+
+  void _calculateMonthlyTotals() {
+    _monthlyTotals = widget.months.map((month) {
+      return widget.expenses
+          .where((e) =>
+              e.category.categoryId == widget.category.categoryId &&
+              e.date.year == month.year &&
+              e.date.month == month.month)
+          .fold<double>(0, (sum, e) => sum + e.amount.toDouble());
+    }).toList();
+  }
+
+  void _scrollToSelectedIndex() {
+    final targetPosition =
+        (widget.selectedIndex * (_columnWidth + _columnSpacing)) -
+            (MediaQuery.of(context).size.width / 2) +
+            (_columnWidth / 2);
+
+    _scrollController.animateTo(
+      targetPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      child: Row(
-        children: [
-          SizedBox(
-            width: 60,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (i) {
-                final maxY = _getMaxY();
-                final step = maxY / 5;
-                final value = maxY - i * step;
-                return Text(
-                  NumberFormat.decimalPattern('vi_VN').format(value.toInt()),
-                  style: const TextStyle(color: Colors.grey, fontSize: 11),
-                );
-              }),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollController,
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero,
-              child: SizedBox(
-                width: widget.months.length * columnWidth,
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    maxY: _getMaxY(),
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    barGroups: _generateBarGroups(context),
-                    barTouchData: BarTouchData(
-                      enabled: true,
-                      touchTooltipData: BarTouchTooltipData(
-                        tooltipPadding: const EdgeInsets.all(4),
-                        tooltipBgColor: Colors.black87,
-                        direction: TooltipDirection.top,
-                        fitInsideVertically: true,
-                        getTooltipItem: (
-                          BarChartGroupData group,
-                          int groupIndex,
-                          BarChartRodData rod,
-                          int rodIndex,
-                        ) {
-                          final amount = rod.toY;
-                          return BarTooltipItem(
-                            NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                                .format(amount),
-                            const TextStyle(color: Colors.white),
-                          );
-                        },
-                      ),
-                      touchCallback: (event, response) {
-                        if (event is FlTapUpEvent) {
-                          final touchX = event.localPosition.dx;
-                          final index =
-                              (touchX ~/ 65).clamp(0, widget.months.length - 1);
-                          widget.onBarTap?.call(index);
-                        }
-                      },
-                    ),
-                    titlesData: FlTitlesData(
-                      topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
-                      leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 20,
-                          getTitlesWidget: (value, meta) {
-                            final index = value.toInt();
-                            if (index < 0 || index >= widget.months.length) {
-                              return const SizedBox.shrink();
-                            }
-                            final label = DateFormat('MM/yy')
-                                .format(widget.months[index]);
-                            return SideTitleWidget(
-                              axisSide: meta.axisSide,
-                              space: 4,
-                              child: Text(
-                                label,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
+    if (_monthlyTotals.isEmpty) {
+      return const Center(child: Text('Không có dữ liệu để hiển thị.'));
+    }
+
+    final maxY = _getMaxY();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildYAxis(maxY),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: widget.months.length * (_columnWidth + _columnSpacing),
+              child: BarChart(
+                BarChartData(
+                  maxY: maxY,
+                  barGroups: _generateBarGroups(context),
+                  titlesData: _buildTitlesData(),
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  barTouchData: _buildBarTouchData(),
                 ),
               ),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildYAxis(double maxY) {
+    return SizedBox(
+      width: 55,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(6, (i) {
+          final value = maxY - (maxY / 5 * i);
+          return Text(
+            NumberFormat.compact(locale: 'vi_VN').format(value),
+            style: const TextStyle(color: Colors.grey, fontSize: 11),
+          );
+        }),
       ),
     );
   }
 
   List<BarChartGroupData> _generateBarGroups(BuildContext context) {
-    final totals = List<double>.filled(widget.months.length, 0);
-
-    for (int i = 0; i < widget.months.length; i++) {
-      final m = widget.months[i];
-      final monthTotal = widget.expenses
-          .where((e) =>
-              e.date.year == m.year &&
-              e.date.month == m.month &&
-              e.category.name == widget.category.name)
-          .fold<double>(0, (sum, e) => sum + e.amount.toDouble());
-      totals[i] = monthTotal;
-    }
-
     return List.generate(widget.months.length, (i) {
       final isSelected = i == widget.selectedIndex;
       return BarChartGroupData(
         x: i,
         barRods: [
           BarChartRodData(
-            toY: totals[i],
-            width: 22,
-            borderRadius: BorderRadius.circular(4),
+            toY: _monthlyTotals[i],
+            width: _columnWidth,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(6),
+              topRight: Radius.circular(6),
+            ),
             gradient: LinearGradient(
               colors: isSelected
-                  ? [Colors.orangeAccent, Colors.deepOrange]
+                  ? [Colors.orange.shade600, Colors.orange.shade300]
                   : [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                      Theme.of(context).colorScheme.tertiary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.8),
                     ],
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
-              transform: const GradientRotation(pi / 40),
             ),
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: _getMaxY(),
-              color: Colors.grey.shade300,
+              color: Colors.grey.shade200,
             ),
           ),
         ],
@@ -194,20 +162,63 @@ class _BarChartSample3State extends State<BarChartSample3> {
     });
   }
 
+  FlTitlesData _buildTitlesData() {
+    return FlTitlesData(
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 28,
+          getTitlesWidget: (value, meta) {
+            final index = value.toInt();
+            final label = DateFormat('MM/yy').format(widget.months[index]);
+            return SideTitleWidget(
+              axisSide: meta.axisSide,
+              space: 8,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  BarTouchData _buildBarTouchData() {
+    return BarTouchData(
+      enabled: true,
+      touchTooltipData: BarTouchTooltipData(
+        tooltipPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        tooltipBgColor: Colors.black87.withOpacity(0.8),
+        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+          return BarTooltipItem(
+            NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(rod.toY),
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          );
+        },
+      ),
+      touchCallback: (event, response) {
+        if (response?.spot != null && event is FlTapUpEvent) {
+          widget.onBarTap?.call(response!.spot!.touchedBarGroupIndex);
+        }
+      },
+    );
+  }
+
   double _getMaxY() {
-    final totals = <double>[];
-    for (final m in widget.months) {
-      final sum = widget.expenses
-          .where((e) =>
-              e.date.year == m.year &&
-              e.date.month == m.month &&
-              e.category.name == widget.category.name)
-          .fold<double>(0, (s, e) => s + e.amount.toDouble());
-      totals.add(sum);
-    }
-    if (totals.every((v) => v == 0)) return 100000;
-    final maxValue = totals.reduce(max);
-    final rounded = ((maxValue + 499999) ~/ 500000) * 500000;
-    return rounded.toDouble();
+    if (_monthlyTotals.isEmpty) return 100000;
+    final maxValue = _monthlyTotals.reduce(max);
+    if (maxValue == 0) return 100000;
+    // Làm tròn lên mốc cao hơn gần nhất để biểu đồ đẹp hơn
+    final orderOfMagnitude = pow(10, (log(maxValue) / ln10).floor());
+    return ((maxValue / orderOfMagnitude).ceil() * orderOfMagnitude).toDouble();
   }
 }
