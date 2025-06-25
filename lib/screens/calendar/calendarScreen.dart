@@ -305,7 +305,7 @@ class _CalendarScreenState extends State<CalendarScreen>
           const SizedBox(width: 12),
           Expanded(
             child: _buildModernSummaryCard(
-              'Số dư',
+              'Tổng',
               totalBalance,
               totalBalance >= 0
                   ? [Colors.blue.shade400, Colors.blue.shade600]

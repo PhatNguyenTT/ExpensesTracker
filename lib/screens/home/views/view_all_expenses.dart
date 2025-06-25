@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
+import 'package:expenses_tracker/screens/home/views/find_expense_screen.dart';
 
 class ViewAllExpenses extends StatefulWidget {
   final List<Expense> expenses;
@@ -175,7 +176,15 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
       ),
       actions: [
         IconButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    FindExpenseScreen(allExpenses: widget.expenses),
+              ),
+            );
+          },
           icon: const Icon(Icons.search, color: Colors.black87, size: 28),
         ),
         IconButton(
