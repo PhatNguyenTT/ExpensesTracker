@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:expenses_tracker/utils/sample_dialog.dart';
 import 'package:expense_repository/expense_repository.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
@@ -101,16 +100,15 @@ class _AddExpenseState extends State<AddExpense>
             listener: (context, state) {
               if (state is CreateExpenseSuccess) {
                 setState(() => isLoading = false);
-                showSampleDialog(context, message: 'Đã nhập dữ liệu');
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Thêm giao dịch thành công'),
+                    backgroundColor: Colors.green));
                 Navigator.pop(context, state.expense);
               } else if (state is CreateExpenseFailure) {
                 setState(() => isLoading = false);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text('Thêm giao dịch thất bại'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 80)));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Thêm giao dịch thất bại'),
+                    backgroundColor: Colors.red));
               } else if (state is CreateExpenseLoading) {
                 setState(() => isLoading = true);
               }
@@ -120,16 +118,15 @@ class _AddExpenseState extends State<AddExpense>
             listener: (context, state) {
               if (state is UpdateExpenseSuccess) {
                 setState(() => isLoading = false);
-                showSampleDialog(context, message: 'Đã cập nhật');
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Cập nhật giao dịch thành công'),
+                    backgroundColor: Colors.green));
                 Navigator.pop(context, state.expense);
               } else if (state is UpdateExpenseFailure) {
                 setState(() => isLoading = false);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('Cập nhật thất bại: ${state.error}'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 80)));
+                    backgroundColor: Colors.red));
               } else if (state is UpdateExpenseLoading) {
                 setState(() => isLoading = true);
               }
@@ -144,15 +141,14 @@ class _AddExpenseState extends State<AddExpense>
               }
 
               if (state is DeleteExpenseSuccess) {
-                showSampleDialog(context, message: 'Đã xoá');
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Xóa giao dịch thành công'),
+                    backgroundColor: Colors.green));
                 Navigator.pop(context, state.expenseId);
               } else if (state is DeleteExpenseFailure) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('Xóa thất bại: ${state.error}'),
-                    backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 80)));
+                    backgroundColor: Colors.red));
               }
             },
           ),

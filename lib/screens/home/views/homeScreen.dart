@@ -105,24 +105,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Cập nhật giao dịch thành công'),
+                  const SnackBar(
+                    content: Text('Cập nhật giao dịch thành công'),
                     backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 80),
                   ),
                 );
-
-                // Việc đóng form chỉnh sửa được xử lý ngay trong trang AddExpense, tránh đóng 2 lần.
               } else if (state is UpdateExpenseFailure) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Cập nhật thất bại: ${state.error}'),
                     backgroundColor: Colors.red,
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 80),
                   ),
                 );
               }
