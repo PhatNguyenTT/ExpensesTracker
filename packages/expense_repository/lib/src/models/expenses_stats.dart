@@ -1,0 +1,64 @@
+import 'package:expense_repository/expense_repository.dart';
+import 'package:expense_repository/src/models/transaction_type.dart';
+
+class ExpenseStats {
+  final int totalIncome;
+  final int totalExpense;
+
+  ExpenseStats({
+    required this.totalIncome,
+    required this.totalExpense,
+  });
+
+  int get balance => totalIncome - totalExpense;
+
+  /// Tính số dư thực với số dư ban đầu
+  int balanceWithInitial(int initialBalance) =>
+      initialBalance + totalIncome - totalExpense;
+
+  /// Tính số dư thực với InitialBalance object
+  int realBalance(InitialBalance? initialBalance) {
+    final initial = initialBalance?.amount ?? 0;
+    return initial + totalIncome - totalExpense;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'totalIncome': totalIncome,
+        'totalExpense': totalExpense,
+        'balance': balance,
+      };
+
+  Map<String, dynamic> toJsonWithInitial(int initialBalance) => {
+        'totalIncome': totalIncome,
+        'totalExpense': totalExpense,
+        'balance': balance,
+        'initialBalance': initialBalance,
+        'realBalance': balanceWithInitial(initialBalance),
+      };
+
+  factory ExpenseStats.fromExpenses(List<Expense> expenses) {
+    final income = expenses
+        .where((e) => e.category.type == TransactionType.income)
+        .fold(0, (sum, e) => sum + e.amount);
+
+    final expense = expenses
+        .where((e) => e.category.type == TransactionType.expense)
+        .fold(0, (sum, e) => sum + e.amount);
+
+    return ExpenseStats(totalIncome: income, totalExpense: expense);
+  }
+
+  @override
+  String toString() =>
+      'Thu nhập: $totalIncome, Chi tiêu: $totalExpense, Số dư: $balance';
+}
+
+extension ExpenseStatsExtension on List<Expense> {
+  ExpenseStats get stats => ExpenseStats.fromExpenses(this);
+
+  /// Tính số dư thực với initial balance
+  int realBalanceWith(InitialBalance? initialBalance) {
+    final stats = ExpenseStats.fromExpenses(this);
+    return stats.realBalance(initialBalance);
+  }
+}
