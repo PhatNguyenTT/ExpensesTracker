@@ -1,6 +1,8 @@
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:expenses_tracker/screens/stats/chart/pie_chart_with_badge.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
@@ -9,9 +11,9 @@ import 'package:expenses_tracker/screens/stats/views/statsExpense.dart';
 import 'package:expenses_tracker/screens/stats/views/statsExpense_year.dart';
 
 class StatsScreen extends StatefulWidget {
-  final List<Expense> expenses;
+  final List<Expense> allExpenses;
 
-  const StatsScreen(this.expenses, {super.key});
+  const StatsScreen({super.key, required this.allExpenses});
 
   @override
   State<StatsScreen> createState() => _StatsScreenState();
@@ -26,15 +28,34 @@ class _StatsScreenState extends State<StatsScreen> {
   List<Expense> _summaryExpenses = [];
   double _totalAmount = 0;
 
+  String? _activeWalletId;
+
   @override
-  void initState() {
-    super.initState();
-    _processExpenses();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final activeWalletState = context.watch<ActiveWalletBloc>().state;
+    if (activeWalletState is ActiveWalletLoaded) {
+      if (_activeWalletId != activeWalletState.activeWallet.walletId) {
+        _activeWalletId = activeWalletState.activeWallet.walletId;
+        _processExpenses();
+      }
+    }
   }
 
   void _processExpenses() {
+    if (_activeWalletId == null) {
+      _filteredExpenses = [];
+      _summaryExpenses = [];
+      _totalAmount = 0;
+      setState(() {});
+      return;
+    }
+
+    final walletExpenses =
+        widget.allExpenses.where((e) => e.walletId == _activeWalletId).toList();
+
     final isExpense = _selectedType == 0;
-    _filteredExpenses = widget.expenses.where((e) {
+    _filteredExpenses = walletExpenses.where((e) {
       final isSamePeriod = _selectedView == 0
           ? (e.date.month == _selectedDate.month &&
               e.date.year == _selectedDate.year)
@@ -68,16 +89,26 @@ class _StatsScreenState extends State<StatsScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _filteredExpenses.isEmpty
-                  ? _buildEmptyState()
-                  : _buildContent(),
-            ),
-          ],
+        child: BlocListener<ActiveWalletBloc, ActiveWalletState>(
+          listener: (context, state) {
+            if (state is ActiveWalletLoaded) {
+              if (_activeWalletId != state.activeWallet.walletId) {
+                _activeWalletId = state.activeWallet.walletId;
+                _processExpenses();
+              }
+            }
+          },
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _filteredExpenses.isEmpty
+                    ? _buildEmptyState()
+                    : _buildContent(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -120,7 +151,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 child: Center(
                   child: Text(
                     _selectedView == 0
-                        ? DateFormat('MMMM yyyy', 'vi_VN').format(_selectedDate)
+                        ? 'Tháng ${DateFormat('M, yyyy').format(_selectedDate)}'
                         : DateFormat('yyyy').format(_selectedDate),
                     style: const TextStyle(
                       fontSize: 18,
@@ -286,12 +317,12 @@ class _StatsScreenState extends State<StatsScreen> {
             MaterialPageRoute(
               builder: (_) => _selectedView == 0
                   ? StatsExpenseScreen(
-                      expenses: widget.expenses,
+                      expenses: widget.allExpenses,
                       category: e.category,
                       initialMonth: _selectedDate,
                     )
                   : StatsExpenseYearScreen(
-                      expenses: widget.expenses,
+                      expenses: widget.allExpenses,
                       category: e.category,
                       year: _selectedDate.year,
                     ),

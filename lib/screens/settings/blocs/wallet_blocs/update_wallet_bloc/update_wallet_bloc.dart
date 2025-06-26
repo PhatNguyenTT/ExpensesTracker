@@ -14,7 +14,7 @@ class UpdateWalletBloc extends Bloc<UpdateWalletEvent, UpdateWalletState> {
       emit(UpdateWalletLoading());
       try {
         await expenseRepository.updateWallet(event.wallet);
-        emit(UpdateWalletSuccess());
+        emit(UpdateWalletSuccess(event.wallet));
       } catch (e) {
         emit(UpdateWalletFailure(message: e.toString()));
       }

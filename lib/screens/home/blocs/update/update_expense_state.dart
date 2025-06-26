@@ -11,7 +11,14 @@ class UpdateExpenseInitial extends UpdateExpenseState {}
 
 class UpdateExpenseLoading extends UpdateExpenseState {}
 
-class UpdateExpenseSuccess extends UpdateExpenseState {}
+class UpdateExpenseSuccess extends UpdateExpenseState {
+  final Expense expense;
+
+  const UpdateExpenseSuccess(this.expense);
+
+  @override
+  List<Object?> get props => [expense];
+}
 
 class UpdateExpenseFailure extends UpdateExpenseState {
   final String error;

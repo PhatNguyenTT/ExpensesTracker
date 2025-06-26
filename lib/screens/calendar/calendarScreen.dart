@@ -5,11 +5,12 @@ import 'package:expense_repository/expense_repository.dart';
 import 'package:expenses_tracker/screens/calendar/table_calendar.dart'; // Custom Table Calendar
 import 'package:expenses_tracker/utils/currency_formatter.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
+import 'package:expenses_tracker/utils/icon_mapper.dart';
 
 class CalendarScreen extends StatefulWidget {
-  final List<Expense> expenses;
+  final List<Expense> allExpenses;
 
-  const CalendarScreen({super.key, required this.expenses});
+  const CalendarScreen({super.key, required this.allExpenses});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -43,7 +44,7 @@ class _CalendarScreenState extends State<CalendarScreen>
 
   // Hàm lấy chi tiêu theo ngày đã chọn
   List<Expense> getExpensesForDay(DateTime day) {
-    return widget.expenses.where((expense) {
+    return widget.allExpenses.where((expense) {
       return expense.date.year == day.year &&
           expense.date.month == day.month &&
           expense.date.day == day.day;
@@ -56,14 +57,14 @@ class _CalendarScreenState extends State<CalendarScreen>
 
     // Tính tổng thu nhập, chi tiêu, và tổng số dư cho tháng
     // Hàm tính tổng thu nhập, chi tiêu, và tổng số dư cho tháng hiện tại
-    final monthlyIncome = widget.expenses
+    final monthlyIncome = widget.allExpenses
         .where((expense) =>
             expense.category.type == tt.TransactionType.income &&
             expense.date.year == focusedDay.year &&
             expense.date.month == focusedDay.month)
         .fold(0, (total, expense) => total + expense.amount);
 
-    final monthlyExpense = widget.expenses
+    final monthlyExpense = widget.allExpenses
         .where((expense) =>
             expense.category.type == tt.TransactionType.expense &&
             expense.date.year == focusedDay.year &&
@@ -101,7 +102,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                     child: CustomTableCalendar(
                       focusedDay: focusedDay,
                       selectedDay: selectedDay,
-                      expenses: widget.expenses,
+                      expenses: widget.allExpenses,
                       onDaySelected: (selectedDay, focusedDay) {
                         setState(() {
                           this.selectedDay = selectedDay;
@@ -290,7 +291,7 @@ class _CalendarScreenState extends State<CalendarScreen>
               'Thu nhập',
               monthlyIncome,
               [Colors.green.shade400, Colors.green.shade600],
-              Icons.trending_up_rounded,
+              Icons.arrow_upward_rounded,
             ),
           ),
           const SizedBox(width: 12),
@@ -299,7 +300,7 @@ class _CalendarScreenState extends State<CalendarScreen>
               'Chi tiêu',
               monthlyExpense,
               [Colors.red.shade400, Colors.red.shade600],
-              Icons.trending_down_rounded,
+              Icons.arrow_downward_rounded,
             ),
           ),
           const SizedBox(width: 12),
@@ -311,8 +312,8 @@ class _CalendarScreenState extends State<CalendarScreen>
                   ? [Colors.blue.shade400, Colors.blue.shade600]
                   : [Colors.orange.shade400, Colors.orange.shade600],
               totalBalance >= 0
-                  ? Icons.account_balance_wallet_rounded
-                  : Icons.warning_rounded,
+                  ? Icons.trending_up_rounded
+                  : Icons.trending_down_rounded,
             ),
           ),
         ],
@@ -339,47 +340,50 @@ class _CalendarScreenState extends State<CalendarScreen>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
+          Positioned(
+            right: -10,
+            bottom: -10,
+            child: Icon(
+              icon,
+              size: 80,
+              color: Colors.white.withOpacity(0.15),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: Colors.white.withOpacity(0.9), size: 20),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.arrow_upward_rounded,
+              Row(
+                children: [
+                  Icon(icon, color: Colors.white.withOpacity(0.9), size: 20),
+                  const Spacer(),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
                   color: Colors.white,
-                  size: 14,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title == 'Tổng'
+                      ? formatSignedCurrency(amount)
+                      : formatCurrency(amount),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              formatSignedCurrency(amount.abs()),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),
@@ -451,14 +455,12 @@ class _CalendarScreenState extends State<CalendarScreen>
             leading: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isIncome ? Colors.green.shade50 : Colors.red.shade50,
+                color: expense.category.color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                isIncome
-                    ? Icons.arrow_downward_rounded
-                    : Icons.arrow_upward_rounded,
-                color: isIncome ? Colors.green.shade600 : Colors.red.shade600,
+                IconMapper.getIcon(expense.category.icon),
+                color: expense.category.color,
                 size: 20,
               ),
             ),

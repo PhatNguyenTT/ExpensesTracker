@@ -13,7 +13,7 @@ class DeleteExpenseBloc extends Bloc<DeleteExpenseEvent, DeleteExpenseState> {
       emit(DeleteExpenseLoading());
       try {
         await _expenseRepository.deleteExpense(event.expenseId);
-        emit(DeleteExpenseSuccess());
+        emit(DeleteExpenseSuccess(event.expenseId));
       } catch (e) {
         emit(DeleteExpenseFailure(e.toString()));
       }

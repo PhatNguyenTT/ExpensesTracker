@@ -11,7 +11,14 @@ final class UpdateWalletInitial extends UpdateWalletState {}
 
 final class UpdateWalletLoading extends UpdateWalletState {}
 
-final class UpdateWalletSuccess extends UpdateWalletState {}
+final class UpdateWalletSuccess extends UpdateWalletState {
+  final Wallet wallet;
+
+  const UpdateWalletSuccess(this.wallet);
+
+  @override
+  List<Object> get props => [wallet];
+}
 
 final class UpdateWalletFailure extends UpdateWalletState {
   final String message;

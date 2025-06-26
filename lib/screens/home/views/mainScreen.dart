@@ -15,6 +15,9 @@ import 'package:intl/intl.dart';
 import 'package:expenses_tracker/utils/currency_formatter.dart';
 import 'package:expenses_tracker/screens/stats/stats_helper.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
+import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
+import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
+import 'package:expenses_tracker/screens/home/blocs/get/get_expenses_bloc.dart';
 
 class MainScreen extends StatelessWidget {
   final List<Expense> expenses;
@@ -230,15 +233,25 @@ class MainScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => MultiBlocProvider(
+                      builder: (newContext) => MultiBlocProvider(
                         providers: [
-                          BlocProvider(
-                            create: (context) =>
-                                DeleteExpenseBloc(FirebaseExpenseRepo()),
+                          BlocProvider.value(
+                            value: BlocProvider.of<GetExpensesBloc>(context),
                           ),
-                          BlocProvider(
-                            create: (context) =>
-                                UpdateExpenseBloc(FirebaseExpenseRepo()),
+                          BlocProvider.value(
+                            value: BlocProvider.of<GetCategoriesBloc>(context),
+                          ),
+                          BlocProvider.value(
+                            value: BlocProvider.of<CreateExpenseBloc>(context),
+                          ),
+                          BlocProvider.value(
+                            value: BlocProvider.of<UpdateExpenseBloc>(context),
+                          ),
+                          BlocProvider.value(
+                            value: BlocProvider.of<DeleteExpenseBloc>(context),
+                          ),
+                          BlocProvider.value(
+                            value: BlocProvider.of<ActiveWalletBloc>(context),
                           ),
                         ],
                         child: ViewAllExpenses(expenses: expenses),

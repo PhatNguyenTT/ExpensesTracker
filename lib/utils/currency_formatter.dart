@@ -19,3 +19,14 @@ String formatSignedCurrency(int amount, {bool showPlusSign = false}) {
 Color getAmountColor(int amount) {
   return amount >= 0 ? Colors.green : Colors.red;
 }
+
+String formatCurrency(int amount) {
+  final format =
+      NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+  return format.format(amount.abs());
+}
+
+String formatSimpleCurrency(int amount) {
+  final format = NumberFormat.decimalPattern('vi_VN');
+  return format.format(amount);
+}

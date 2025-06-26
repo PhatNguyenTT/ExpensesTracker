@@ -9,24 +9,70 @@ class IconInfo {
 }
 
 final List<IconInfo> categoryIcons = [
-  IconInfo(icon: Icons.fastfood, name: 'food'),
-  IconInfo(icon: Icons.shopping_bag, name: 'shopping'),
-  IconInfo(icon: Icons.local_gas_station, name: 'fuel'),
-  IconInfo(icon: Icons.movie, name: 'entertainment'),
-  IconInfo(icon: Icons.local_hospital, name: 'health'),
-  IconInfo(icon: Icons.home, name: 'home'),
-  IconInfo(icon: Icons.school, name: 'education'),
-  IconInfo(icon: Icons.phone_android, name: 'phone'),
-  IconInfo(icon: Icons.wifi, name: 'internet'),
-  IconInfo(icon: Icons.work, name: 'salary'),
-  IconInfo(icon: Icons.card_giftcard, name: 'bonus'),
-  IconInfo(icon: Icons.trending_up, name: 'investment'),
-  IconInfo(icon: Icons.pets, name: 'pet'),
-  IconInfo(icon: Icons.devices, name: 'tech'),
-  IconInfo(icon: Icons.airplane_ticket, name: 'travel'),
-  IconInfo(icon: Icons.receipt_long_sharp, name: 'bills'),
-  IconInfo(icon: Icons.subscriptions, name: 'subscription'),
-  IconInfo(icon: Icons.sports_esports, name: 'games'),
+  // Food & Drinks
+  IconInfo(icon: FontAwesomeIcons.utensils, name: 'restaurant'),
+  IconInfo(icon: FontAwesomeIcons.burger, name: 'fast_food'),
+  IconInfo(icon: FontAwesomeIcons.pizzaSlice, name: 'pizza'),
+  IconInfo(icon: FontAwesomeIcons.mugSaucer, name: 'coffee'),
+  IconInfo(icon: FontAwesomeIcons.martiniGlass, name: 'drinks'),
+  IconInfo(icon: FontAwesomeIcons.carrot, name: 'groceries'),
+
+  // Housing & Bills
+  IconInfo(icon: FontAwesomeIcons.house, name: 'rent'),
+  IconInfo(icon: FontAwesomeIcons.lightbulb, name: 'electricity'),
+  IconInfo(icon: FontAwesomeIcons.faucetDrip, name: 'water'),
+  IconInfo(icon: FontAwesomeIcons.wifi, name: 'internet'),
+  IconInfo(icon: FontAwesomeIcons.phone, name: 'phone_bill'),
+  IconInfo(icon: FontAwesomeIcons.fileInvoiceDollar, name: 'other_bills'),
+
+  // Transportation
+  IconInfo(icon: FontAwesomeIcons.gasPump, name: 'fuel'),
+  IconInfo(icon: FontAwesomeIcons.car, name: 'car_maintenance'),
+  IconInfo(icon: FontAwesomeIcons.busSimple, name: 'public_transport'),
+  IconInfo(icon: FontAwesomeIcons.taxi, name: 'taxi'),
+  IconInfo(icon: FontAwesomeIcons.train, name: 'train'),
+  IconInfo(icon: FontAwesomeIcons.plane, name: 'flight'),
+
+  // Shopping
+  IconInfo(icon: FontAwesomeIcons.shirt, name: 'clothing'),
+  IconInfo(icon: FontAwesomeIcons.laptop, name: 'electronics'),
+  IconInfo(icon: FontAwesomeIcons.couch, name: 'furniture'),
+  IconInfo(icon: FontAwesomeIcons.gift, name: 'gifts'),
+  IconInfo(icon: FontAwesomeIcons.bagShopping, name: 'other_shopping'),
+
+  // Health & Wellness
+  IconInfo(icon: FontAwesomeIcons.stethoscope, name: 'doctor'),
+  IconInfo(icon: FontAwesomeIcons.pills, name: 'pharmacy'),
+  IconInfo(icon: FontAwesomeIcons.heartPulse, name: 'health_insurance'),
+  IconInfo(icon: FontAwesomeIcons.dumbbell, name: 'gym'),
+  IconInfo(icon: FontAwesomeIcons.spa, name: 'spa_wellness'),
+
+  // Entertainment
+  IconInfo(icon: FontAwesomeIcons.film, name: 'movies'),
+  IconInfo(icon: FontAwesomeIcons.gamepad, name: 'games'),
+  IconInfo(icon: FontAwesomeIcons.music, name: 'music'),
+  IconInfo(icon: FontAwesomeIcons.book, name: 'books'),
+  IconInfo(icon: FontAwesomeIcons.ticket, name: 'events'),
+
+  // Education
+  IconInfo(icon: FontAwesomeIcons.graduationCap, name: 'tuition'),
+  IconInfo(icon: FontAwesomeIcons.bookOpenReader, name: 'courses'),
+
+  // Pets
+  IconInfo(icon: FontAwesomeIcons.dog, name: 'dog'),
+  IconInfo(icon: FontAwesomeIcons.cat, name: 'cat'),
+  IconInfo(icon: FontAwesomeIcons.paw, name: 'pet_food_supplies'),
+
+  // Income
+  IconInfo(icon: FontAwesomeIcons.moneyBillWave, name: 'salary'),
+  IconInfo(icon: FontAwesomeIcons.briefcase, name: 'freelance'),
+  IconInfo(icon: FontAwesomeIcons.chartLine, name: 'investment_income'),
+  IconInfo(icon: FontAwesomeIcons.sackDollar, name: 'bonus'),
+
+  // Others
+  IconInfo(icon: FontAwesomeIcons.moneyCheckDollar, name: 'insurance_payout'),
+  IconInfo(icon: FontAwesomeIcons.handHoldingDollar, name: 'donation'),
+  IconInfo(icon: FontAwesomeIcons.boxesPacking, name: 'miscellaneous'),
 ];
 
 class IconPickerGrid extends StatelessWidget {

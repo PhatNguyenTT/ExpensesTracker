@@ -3,27 +3,72 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class IconMapper {
   static final Map<String, IconData> _iconMap = {
-    // Category Icons
-    'food': Icons.fastfood,
-    'shopping': Icons.shopping_bag,
-    'fuel': Icons.local_gas_station,
-    'entertainment': Icons.movie,
-    'health': Icons.local_hospital,
-    'home': Icons.home,
-    'education': Icons.school,
-    'phone': Icons.phone_android,
-    'internet': Icons.wifi,
-    'salary': Icons.work,
-    'bonus': Icons.card_giftcard,
-    'investment': Icons.trending_up,
-    'pet': Icons.pets,
-    'tech': Icons.devices,
-    'travel': Icons.airplane_ticket,
-    'bills': Icons.receipt_long_sharp,
-    'subscription': Icons.subscriptions,
-    'games': Icons.sports_esports,
+    // Food & Drinks
+    'restaurant': FontAwesomeIcons.utensils,
+    'fast_food': FontAwesomeIcons.burger,
+    'pizza': FontAwesomeIcons.pizzaSlice,
+    'coffee': FontAwesomeIcons.mugSaucer,
+    'drinks': FontAwesomeIcons.martiniGlass,
+    'groceries': FontAwesomeIcons.carrot,
 
-    // Wallet Icons
+    // Housing & Bills
+    'rent': FontAwesomeIcons.house,
+    'electricity': FontAwesomeIcons.lightbulb,
+    'water': FontAwesomeIcons.faucetDrip,
+    'internet': FontAwesomeIcons.wifi,
+    'phone_bill': FontAwesomeIcons.phone,
+    'other_bills': FontAwesomeIcons.fileInvoiceDollar,
+
+    // Transportation
+    'fuel': FontAwesomeIcons.gasPump,
+    'car_maintenance': FontAwesomeIcons.car,
+    'public_transport': FontAwesomeIcons.busSimple,
+    'taxi': FontAwesomeIcons.taxi,
+    'train': FontAwesomeIcons.train,
+    'flight': FontAwesomeIcons.plane,
+
+    // Shopping
+    'clothing': FontAwesomeIcons.shirt,
+    'electronics': FontAwesomeIcons.laptop,
+    'furniture': FontAwesomeIcons.couch,
+    'gifts': FontAwesomeIcons.gift,
+    'other_shopping': FontAwesomeIcons.bagShopping,
+
+    // Health & Wellness
+    'doctor': FontAwesomeIcons.stethoscope,
+    'pharmacy': FontAwesomeIcons.pills,
+    'health_insurance': FontAwesomeIcons.heartPulse,
+    'gym': FontAwesomeIcons.dumbbell,
+    'spa_wellness': FontAwesomeIcons.spa,
+
+    // Entertainment
+    'movies': FontAwesomeIcons.film,
+    'games': FontAwesomeIcons.gamepad,
+    'music': FontAwesomeIcons.music,
+    'books': FontAwesomeIcons.book,
+    'events': FontAwesomeIcons.ticket,
+
+    // Education
+    'tuition': FontAwesomeIcons.graduationCap,
+    'courses': FontAwesomeIcons.bookOpenReader,
+
+    // Pets
+    'dog': FontAwesomeIcons.dog,
+    'cat': FontAwesomeIcons.cat,
+    'pet_food_supplies': FontAwesomeIcons.paw,
+
+    // Income
+    'salary': FontAwesomeIcons.moneyBillWave,
+    'freelance': FontAwesomeIcons.briefcase,
+    'investment_income': FontAwesomeIcons.chartLine,
+    'bonus': FontAwesomeIcons.sackDollar,
+
+    // Others
+    'insurance_payout': FontAwesomeIcons.moneyCheckDollar,
+    'donation': FontAwesomeIcons.handHoldingDollar,
+    'miscellaneous': FontAwesomeIcons.boxesPacking,
+
+    // Wallet Icons (from previous step)
     'wallet': Icons.wallet_outlined,
     'credit_card': Icons.credit_card,
     'account_balance_wallet': Icons.account_balance_wallet_outlined,
@@ -33,7 +78,6 @@ class IconMapper {
     'business_center': Icons.business_center_outlined,
     'shopping_cart': Icons.shopping_cart_outlined,
     'giftcard': Icons.card_giftcard,
-    //'phone_android' is already defined above, so I'll use a different one
     'payments': Icons.payments_outlined,
     'attach_money': Icons.attach_money,
     'euro': Icons.euro,

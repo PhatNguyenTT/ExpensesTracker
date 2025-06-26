@@ -13,7 +13,7 @@ class UpdateExpenseBloc extends Bloc<UpdateExpenseEvent, UpdateExpenseState> {
       emit(UpdateExpenseLoading());
       try {
         await _expenseRepository.updateExpense(event.expense);
-        emit(UpdateExpenseSuccess());
+        emit(UpdateExpenseSuccess(event.expense));
       } catch (e) {
         emit(UpdateExpenseFailure(e.toString()));
       }

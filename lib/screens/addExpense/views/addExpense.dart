@@ -1,11 +1,14 @@
 import 'dart:math';
 
+import 'package:expenses_tracker/utils/sample_dialog.dart';
 import 'package:expense_repository/expense_repository.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
 import 'package:expenses_tracker/screens/addExpense/views/categoryCreation.dart';
 import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
+import 'package:expenses_tracker/screens/home/blocs/delete/delete_expense_bloc.dart';
+import 'package:expenses_tracker/screens/home/blocs/update/update_expense_bloc.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,35 +40,40 @@ class _AddExpenseState extends State<AddExpense>
   @override
   void initState() {
     super.initState();
-    final activeWalletState = context.read<ActiveWalletBloc>().state;
-    String activeWalletId = '';
-    if (activeWalletState is ActiveWalletLoaded) {
-      activeWalletId = activeWalletState.activeWallet.walletId;
-    }
+    // Ensure the BLoC state is read after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final activeWalletState = context.read<ActiveWalletBloc>().state;
+      String activeWalletId = '';
+      if (activeWalletState is ActiveWalletLoaded) {
+        activeWalletId = activeWalletState.activeWallet.walletId;
+      }
 
-    dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
-    expense = widget.expenseToEdit?.copyWith() ??
-        Expense.empty.copyWith(walletId: activeWalletId);
+      setState(() {
+        dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
+        expense = widget.expenseToEdit?.copyWith() ??
+            Expense.empty.copyWith(walletId: activeWalletId);
 
-    if (widget.expenseToEdit != null) {
-      expenseController.text =
-          NumberFormat('#,###', 'vi_VN').format(expense.amount);
-      noteController.text = expense.note ?? '';
-      categoryController.text = expense.category.name;
-      dateController.text = DateFormat('dd/MM/yyyy').format(expense.date);
-    } else {
-      // 💡 RESET FULL khi là tạo mới
-      expense.expenseId = const Uuid().v1();
-      expense.date = DateTime.now();
-      expense.category = Category.empty;
-      expense.walletId = activeWalletId;
-      categoryController.clear();
-    }
+        if (widget.expenseToEdit != null) {
+          expenseController.text =
+              NumberFormat('#,###', 'vi_VN').format(expense.amount);
+          noteController.text = expense.note ?? '';
+          categoryController.text = expense.category.name;
+          dateController.text = DateFormat('dd/MM/yyyy').format(expense.date);
+        } else {
+          expense.expenseId = const Uuid().v1();
+          expense.date = DateTime.now();
+          expense.category = Category.empty;
+          expense.walletId = activeWalletId;
+          categoryController.clear();
+        }
 
-    final isEditingIncome =
-        widget.expenseToEdit?.category.type == tt.TransactionType.income;
-    _tabController = TabController(
-        length: 2, vsync: this, initialIndex: isEditingIncome ? 1 : 0);
+        final isEditingIncome =
+            widget.expenseToEdit?.category.type == tt.TransactionType.income;
+        _tabController.index = isEditingIncome ? 1 : 0;
+      });
+    });
+
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {
         selectedType = _tabController.index == 0
@@ -85,18 +93,70 @@ class _AddExpenseState extends State<AddExpense>
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<CreateExpenseBloc, CreateExpenseState>(
-      listener: (context, state) {
-        if (state is CreateExpenseSuccess) {
-          Navigator.pop(context, expense);
-        } else if (state is CreateExpenseLoading) {
-          setState(() {
-            isLoading = true;
-          });
-        }
-      },
-      child: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<CreateExpenseBloc, CreateExpenseState>(
+            listener: (context, state) {
+              if (state is CreateExpenseSuccess) {
+                setState(() => isLoading = false);
+                showSampleDialog(context, message: 'Đã nhập dữ liệu');
+                Navigator.pop(context, state.expense);
+              } else if (state is CreateExpenseFailure) {
+                setState(() => isLoading = false);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Text('Thêm giao dịch thất bại'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 80)));
+              } else if (state is CreateExpenseLoading) {
+                setState(() => isLoading = true);
+              }
+            },
+          ),
+          BlocListener<UpdateExpenseBloc, UpdateExpenseState>(
+            listener: (context, state) {
+              if (state is UpdateExpenseSuccess) {
+                setState(() => isLoading = false);
+                showSampleDialog(context, message: 'Đã cập nhật');
+                Navigator.pop(context, state.expense);
+              } else if (state is UpdateExpenseFailure) {
+                setState(() => isLoading = false);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Cập nhật thất bại: ${state.error}'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 80)));
+              } else if (state is UpdateExpenseLoading) {
+                setState(() => isLoading = true);
+              }
+            },
+          ),
+          BlocListener<DeleteExpenseBloc, DeleteExpenseState>(
+            listener: (context, state) {
+              if (state is DeleteExpenseLoading) {
+                setState(() => isLoading = true);
+              } else {
+                setState(() => isLoading = false);
+              }
+
+              if (state is DeleteExpenseSuccess) {
+                showSampleDialog(context, message: 'Đã xoá');
+                Navigator.pop(context, state.expenseId);
+              } else if (state is DeleteExpenseFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Xóa thất bại: ${state.error}'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 80)));
+              }
+            },
+          ),
+        ],
         child: Scaffold(
           backgroundColor: Colors.grey[50],
           appBar: AppBar(
@@ -116,6 +176,15 @@ class _AddExpenseState extends State<AddExpense>
               icon: const Icon(Icons.close, color: Colors.black),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              if (widget.expenseToEdit != null)
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    _showDeleteConfirmation(context);
+                  },
+                )
+            ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(60),
               child: Container(
@@ -669,9 +738,18 @@ class _AddExpenseState extends State<AddExpense>
                                               ? amount
                                               : -amount;
                                     });
-                                    context
-                                        .read<CreateExpenseBloc>()
-                                        .add(CreateExpense(expense));
+                                    if (widget.expenseToEdit != null) {
+                                      setState(() => isLoading = true);
+                                      final updateBloc =
+                                          context.read<UpdateExpenseBloc>();
+                                      updateBloc
+                                          .add(UpdateExpenseRequested(expense));
+                                    } else {
+                                      setState(() => isLoading = true);
+                                      final createBloc =
+                                          context.read<CreateExpenseBloc>();
+                                      createBloc.add(CreateExpense(expense));
+                                    }
                                   },
                                   child: Center(
                                     child: Row(
@@ -714,6 +792,32 @@ class _AddExpenseState extends State<AddExpense>
         ),
       ),
     );
+  }
+
+  void _showDeleteConfirmation(BuildContext buildContext) {
+    showDialog(
+        context: buildContext,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Xóa giao dịch?'),
+            content: const Text('Bạn có chắc muốn xóa giao dịch này không?'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Hủy')),
+              TextButton(
+                onPressed: () {
+                  final deleteBloc = buildContext.read<DeleteExpenseBloc>();
+                  deleteBloc.add(
+                      DeleteExpenseRequested(widget.expenseToEdit!.expenseId));
+                  // chỉ đóng dialog, form sẽ tự đóng khi nhận DeleteExpenseSuccess
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+              )
+            ],
+          );
+        });
   }
 }
 

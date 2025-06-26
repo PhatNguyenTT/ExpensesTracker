@@ -17,6 +17,9 @@ import 'package:expenses_tracker/screens/stats/statsScreen.dart';
 import 'package:expenses_tracker/screens/stats/stats_helper.dart';
 import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
 import 'package:expense_repository/src/models/wallet.dart';
+import 'package:expenses_tracker/screens/home/blocs/delete/delete_expense_bloc.dart';
+import 'package:expenses_tracker/screens/home/blocs/update/update_expense_bloc.dart';
+import 'package:expenses_tracker/screens/home/views/view_all_expenses.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,63 +34,151 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<ActiveWalletBloc, ActiveWalletState>(
-          listener: (context, state) {
-            if (state is ActiveWalletLoaded &&
-                state.activeWallet.walletId != activeWalletId) {
-              activeWalletId = state.activeWallet.walletId;
-              context
-                  .read<GetExpensesBloc>()
-                  .add(GetExpenses(walletId: activeWalletId));
-            }
-          },
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) =>
+              CreateExpenseBloc(context.read<ExpenseRepository>()),
         ),
-        BlocListener<GetExpensesBloc, GetExpensesState>(
-          listener: (context, state) {
-            if (state is GetExpensesSuccess && activeWalletId != null) {
-              context
-                  .read<GetSummaryBloc>()
-                  .add(GetOverallSummary(activeWalletId!));
-            }
-          },
+        BlocProvider(
+          create: (context) =>
+              UpdateExpenseBloc(context.read<ExpenseRepository>()),
+        ),
+        BlocProvider(
+          create: (context) =>
+              DeleteExpenseBloc(context.read<ExpenseRepository>()),
+        ),
+        BlocProvider(
+          create: (context) =>
+              CreateCategoryBloc(context.read<ExpenseRepository>()),
         ),
       ],
-      child: BlocBuilder<ActiveWalletBloc, ActiveWalletState>(
-        builder: (context, activeWalletState) {
-          if (activeWalletState is ActiveWalletsEmpty) {
-            return _buildNoWalletUI();
-          }
-
-          if (activeWalletState is ActiveWalletLoaded) {
-            return BlocBuilder<GetExpensesBloc, GetExpensesState>(
-              builder: (context, expensesState) {
-                if (expensesState is GetExpensesSuccess) {
-                  return BlocBuilder<GetSummaryBloc, GetSummaryState>(
-                    builder: (context, summaryState) {
-                      if (summaryState is GetOverallSummarySuccess) {
-                        return _buildMainScaffold(
-                          context,
-                          expensesState.expenses,
-                          summaryState.summary,
-                          activeWalletState.activeWallet,
-                        );
-                      }
-                      return const Scaffold(
-                          body: Center(child: CircularProgressIndicator()));
-                    },
-                  );
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<ActiveWalletBloc, ActiveWalletState>(
+            listener: (context, state) {
+              if (state is ActiveWalletLoaded &&
+                  state.activeWallet.walletId != activeWalletId) {
+                activeWalletId = state.activeWallet.walletId;
+                context
+                    .read<GetExpensesBloc>()
+                    .add(GetExpenses(walletId: activeWalletId));
+              }
+            },
+          ),
+          BlocListener<GetExpensesBloc, GetExpensesState>(
+            listener: (context, state) {
+              if (state is GetExpensesSuccess && activeWalletId != null) {
+                context
+                    .read<GetSummaryBloc>()
+                    .add(GetOverallSummary(activeWalletId!));
+              }
+            },
+          ),
+          BlocListener<CreateExpenseBloc, CreateExpenseState>(
+            listener: (context, state) {
+              if (state is CreateExpenseSuccess) {
+                final getExpensesBloc = context.read<GetExpensesBloc>();
+                if (getExpensesBloc.state is GetExpensesSuccess) {
+                  final currentExpenses =
+                      (getExpensesBloc.state as GetExpensesSuccess).expenses;
+                  final newExpenses = List<Expense>.from(currentExpenses)
+                    ..add(state.expense);
+                  getExpensesBloc.emit(GetExpensesSuccess(newExpenses));
                 }
-                return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()));
-              },
-            );
-          }
+              }
+            },
+          ),
+          BlocListener<UpdateExpenseBloc, UpdateExpenseState>(
+            listener: (context, state) {
+              if (state is UpdateExpenseSuccess) {
+                final getExpensesBloc = context.read<GetExpensesBloc>();
+                if (getExpensesBloc.state is GetExpensesSuccess) {
+                  final currentExpenses =
+                      (getExpensesBloc.state as GetExpensesSuccess).expenses;
+                  final newExpenses = currentExpenses
+                      .map((e) => e.expenseId == state.expense.expenseId
+                          ? state.expense
+                          : e)
+                      .toList();
+                  getExpensesBloc.emit(GetExpensesSuccess(newExpenses));
+                }
 
-          return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
-        },
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Cập nhật giao dịch thành công'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 80),
+                  ),
+                );
+
+                // Việc đóng form chỉnh sửa được xử lý ngay trong trang AddExpense, tránh đóng 2 lần.
+              } else if (state is UpdateExpenseFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Cập nhật thất bại: ${state.error}'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 80),
+                  ),
+                );
+              }
+            },
+          ),
+          BlocListener<DeleteExpenseBloc, DeleteExpenseState>(
+            listener: (context, state) {
+              if (state is DeleteExpenseSuccess) {
+                final getExpensesBloc = context.read<GetExpensesBloc>();
+                if (getExpensesBloc.state is GetExpensesSuccess) {
+                  final currentExpenses =
+                      (getExpensesBloc.state as GetExpensesSuccess).expenses;
+                  final newExpenses = currentExpenses
+                      .where((e) => e.expenseId != state.expenseId)
+                      .toList();
+                  getExpensesBloc.emit(GetExpensesSuccess(newExpenses));
+                }
+              }
+            },
+          ),
+        ],
+        child: BlocBuilder<ActiveWalletBloc, ActiveWalletState>(
+          builder: (context, activeWalletState) {
+            if (activeWalletState is ActiveWalletsEmpty) {
+              return _buildNoWalletUI();
+            }
+
+            if (activeWalletState is ActiveWalletLoaded) {
+              return BlocBuilder<GetExpensesBloc, GetExpensesState>(
+                builder: (context, expensesState) {
+                  if (expensesState is GetExpensesSuccess) {
+                    return BlocBuilder<GetSummaryBloc, GetSummaryState>(
+                      builder: (context, summaryState) {
+                        if (summaryState is GetOverallSummarySuccess) {
+                          return _buildMainScaffold(
+                            context,
+                            expensesState.expenses,
+                            summaryState.summary,
+                            activeWalletState.activeWallet,
+                          );
+                        }
+                        return const Scaffold(
+                            body: Center(child: CircularProgressIndicator()));
+                      },
+                    );
+                  }
+                  return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()));
+                },
+              );
+            }
+
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
+          },
+        ),
       ),
     );
   }
@@ -95,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMainScaffold(BuildContext context, List<Expense> expenses,
       OverallSummary summary, Wallet activeWallet) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(toolbarHeight: 0),
       body: Padding(
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
@@ -105,9 +197,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 activeWallet: activeWallet,
               )
             : index == 1
-                ? CalendarScreen(expenses: expenses)
+                ? CalendarScreen(allExpenses: expenses)
                 : index == 2
-                    ? StatsScreen(expenses)
+                    ? StatsScreen(allExpenses: expenses)
                     : SettingsScreen(expenses: expenses),
       ),
       bottomNavigationBar: ClipRRect(
@@ -137,9 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final newExpense = await Navigator.push(
+          await Navigator.push(
             context,
-            MaterialPageRoute<Expense>(
+            MaterialPageRoute<void>(
               builder: (newContext) => MultiBlocProvider(
                 providers: [
                   BlocProvider.value(
@@ -148,25 +240,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   BlocProvider.value(
                     value: BlocProvider.of<ActiveWalletBloc>(context),
                   ),
-                  BlocProvider(
-                    create: (_) =>
-                        CreateExpenseBloc(context.read<ExpenseRepository>()),
+                  BlocProvider.value(
+                    value: BlocProvider.of<CreateExpenseBloc>(context),
                   ),
-                  BlocProvider(
-                    create: (_) =>
-                        CreateCategoryBloc(context.read<ExpenseRepository>()),
+                  BlocProvider.value(
+                    value: BlocProvider.of<UpdateExpenseBloc>(context),
+                  ),
+                  BlocProvider.value(
+                    value: BlocProvider.of<DeleteExpenseBloc>(context),
+                  ),
+                  BlocProvider.value(
+                    value: BlocProvider.of<CreateCategoryBloc>(context),
                   ),
                 ],
                 child: const AddExpense(),
               ),
             ),
           );
-
-          if (newExpense != null && context.mounted) {
-            context
-                .read<GetExpensesBloc>()
-                .add(GetExpenses(walletId: activeWallet.walletId));
-          }
         },
         shape: const CircleBorder(),
         child: Container(

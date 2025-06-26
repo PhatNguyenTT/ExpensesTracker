@@ -13,7 +13,7 @@ class CreateExpenseBloc extends Bloc<CreateExpenseEvent, CreateExpenseState> {
       emit(CreateExpenseLoading());
       try {
         await expenseRepository.createExpense(event.expense);
-        emit(CreateExpenseSuccess());
+        emit(CreateExpenseSuccess(event.expense));
       } catch (e) {
         emit(CreateExpenseFailure());
       }

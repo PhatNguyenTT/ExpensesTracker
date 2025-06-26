@@ -11,7 +11,14 @@ class DeleteExpenseInitial extends DeleteExpenseState {}
 
 class DeleteExpenseLoading extends DeleteExpenseState {}
 
-class DeleteExpenseSuccess extends DeleteExpenseState {}
+class DeleteExpenseSuccess extends DeleteExpenseState {
+  final String expenseId;
+
+  const DeleteExpenseSuccess(this.expenseId);
+
+  @override
+  List<Object?> get props => [expenseId];
+}
 
 class DeleteExpenseFailure extends DeleteExpenseState {
   final String error;

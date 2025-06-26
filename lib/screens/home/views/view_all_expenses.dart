@@ -7,6 +7,14 @@ import 'package:intl/intl.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/screens/home/views/find_expense_screen.dart';
+import 'package:expenses_tracker/screens/home/blocs/delete/delete_expense_bloc.dart';
+import 'package:expenses_tracker/screens/home/blocs/update/update_expense_bloc.dart';
+import 'package:expenses_tracker/screens/addExpense/views/addExpense.dart';
+import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
+import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:expenses_tracker/screens/home/blocs/get/get_expenses_bloc.dart';
+import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 
 class ViewAllExpenses extends StatefulWidget {
   final List<Expense> expenses;
@@ -17,6 +25,7 @@ class ViewAllExpenses extends StatefulWidget {
 }
 
 class _ViewAllExpensesState extends State<ViewAllExpenses> {
+  late List<Expense> _allExpenses;
   late PageController _pageController;
   late ScrollController _monthScrollController;
   late dynamic _selectedPageKey;
@@ -28,6 +37,7 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
   @override
   void initState() {
     super.initState();
+    _allExpenses = List<Expense>.from(widget.expenses);
     _processAndSetupData();
 
     _pageController = PageController(initialPage: _initialPage);
@@ -51,14 +61,14 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
 
     // Gán dữ liệu cho 12 tháng gần nhất
     for (var monthKey in last12Months) {
-      _pagesData[monthKey] = widget.expenses
+      _pagesData[monthKey] = _allExpenses
           .where((e) =>
               e.date.year == monthKey.year && e.date.month == monthKey.month)
           .toList();
     }
 
     // 2. Lọc và gom nhóm các giao dịch trong tương lai
-    final futureExpenses = widget.expenses.where((e) {
+    final futureExpenses = _allExpenses.where((e) {
       final expenseMonthKey = DateTime(e.date.year, e.date.month);
       return expenseMonthKey.isAfter(currentMonthKey);
     }).toList();
@@ -74,7 +84,7 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
     if (_initialPage < 0) _initialPage = 0; // Fallback
 
     // Tính tổng số dư
-    _totalBalance = widget.expenses.fold(0.0, (sum, e) {
+    _totalBalance = _allExpenses.fold(0.0, (sum, e) {
       return e.category.type == tt.TransactionType.expense
           ? sum - e.amount
           : sum + e.amount;
@@ -109,38 +119,160 @@ class _ViewAllExpensesState extends State<ViewAllExpenses> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: _buildAppBar(context),
-      body: Column(
-        children: [
-          _buildMonthSelector(),
-          Expanded(
-            child: _pageKeys.isEmpty
-                ? const Center(
-                    child: Text("Không có giao dịch nào.",
-                        style: TextStyle(color: Colors.grey)))
-                : PageView.builder(
-                    controller: _pageController,
-                    itemCount: _pageKeys.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _selectedPageKey = _pageKeys[index];
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      final pageKey = _pageKeys[index];
-                      final pageExpenses = _pagesData[pageKey] ?? [];
-
-                      return MonthlyExpensePage(
-                        pageKey: pageKey,
-                        expenses: pageExpenses,
-                        allExpenses: widget.expenses,
-                      );
-                    },
+    Widget buildExpenseTile(Expense expense) {
+      final isExpense = expense.category.type == tt.TransactionType.expense;
+      return InkWell(
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (ctx) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(
+                    value: BlocProvider.of<CreateExpenseBloc>(context),
                   ),
+                  BlocProvider.value(
+                    value: BlocProvider.of<UpdateExpenseBloc>(context),
+                  ),
+                  BlocProvider.value(
+                    value: BlocProvider.of<DeleteExpenseBloc>(context),
+                  ),
+                  BlocProvider.value(
+                    value: BlocProvider.of<GetCategoriesBloc>(context),
+                  ),
+                  BlocProvider.value(
+                    value: BlocProvider.of<ActiveWalletBloc>(context),
+                  ),
+                ],
+                child: AddExpense(expenseToEdit: expense),
+              ),
+            ),
+          );
+
+          if (result != null) {
+            setState(() {
+              if (result is Expense) {
+                // Cập nhật giao dịch vừa chỉnh sửa
+                final idx = _allExpenses
+                    .indexWhere((e) => e.expenseId == result.expenseId);
+                if (idx != -1) {
+                  _allExpenses[idx] = result;
+                } else {
+                  _allExpenses.add(result);
+                }
+              } else if (result is String) {
+                // Xóa giao dịch (result là expenseId)
+                _allExpenses.removeWhere((e) => e.expenseId == result);
+                // cập nhật ngay BLoC toàn cục để tránh trễ
+                final getBloc = context.read<GetExpensesBloc>();
+                if (getBloc.state is GetExpensesSuccess) {
+                  final curr = (getBloc.state as GetExpensesSuccess).expenses;
+                  final updated =
+                      curr.where((e) => e.expenseId != result).toList();
+                  getBloc.emit(GetExpensesSuccess(updated));
+                }
+              }
+
+              _processAndSetupData();
+            });
+
+            // Yêu cầu tải lại toàn bộ danh sách và summary ở HomeScreen
+            final activeState = context.read<ActiveWalletBloc>().state;
+            if (activeState is ActiveWalletLoaded) {
+              context.read<GetExpensesBloc>().add(
+                  GetExpenses(walletId: activeState.activeWallet.walletId));
+            }
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: expense.category.color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  IconMapper.getIcon(expense.category.icon),
+                  color: expense.category.color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  expense.category.name,
+                  style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+              Text(
+                NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                    .format(expense.amount),
+                style: TextStyle(
+                  color: isExpense ? Colors.red : Colors.green,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return BlocListener<GetExpensesBloc, GetExpensesState>(
+      listener: (context, state) {
+        if (state is GetExpensesSuccess) {
+          setState(() {
+            _allExpenses = List<Expense>.from(state.expenses);
+            _processAndSetupData();
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: _buildAppBar(context),
+        body: Column(
+          children: [
+            _buildMonthSelector(),
+            Expanded(
+              child: _pageKeys.isEmpty
+                  ? const Center(
+                      child: Text("Không có giao dịch nào.",
+                          style: TextStyle(color: Colors.grey)))
+                  : PageView.builder(
+                      controller: _pageController,
+                      itemCount: _pageKeys.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _selectedPageKey = _pageKeys[index];
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        final pageKey = _pageKeys[index];
+                        final pageExpenses = _pagesData[pageKey] ?? [];
+
+                        return MonthlyExpensePage(
+                          pageKey: pageKey,
+                          expenses: pageExpenses,
+                          allExpenses: _allExpenses,
+                          buildExpenseTile: buildExpenseTile,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -279,12 +411,14 @@ class MonthlyExpensePage extends StatelessWidget {
   final dynamic pageKey;
   final List<Expense> expenses;
   final List<Expense> allExpenses;
+  final Widget Function(Expense) buildExpenseTile;
 
   const MonthlyExpensePage({
     super.key,
     required this.pageKey,
     required this.expenses,
     required this.allExpenses,
+    required this.buildExpenseTile,
   });
 
   @override
@@ -334,7 +468,7 @@ class MonthlyExpensePage extends StatelessWidget {
             const SizedBox(height: 24),
             ...sortedDays.map((day) {
               final dailyExpenses = groupedByDay[day]!;
-              return DailyExpenseCard(day: day, expenses: dailyExpenses);
+              return _buildDailyExpenseCard(context, day, dailyExpenses);
             }),
           ],
         ),
@@ -383,29 +517,13 @@ class MonthlyExpensePage extends StatelessWidget {
       ],
     );
   }
-}
 
-class DailyExpenseCard extends StatelessWidget {
-  final DateTime day;
-  final List<Expense> expenses;
-
-  const DailyExpenseCard({
-    super.key,
-    required this.day,
-    required this.expenses,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dayTotal = expenses.fold(
-        0.0,
-        (sum, e) => e.category.type == tt.TransactionType.expense
-            ? sum - e.amount
-            : sum + e.amount);
-
+  Widget _buildDailyExpenseCard(
+      BuildContext context, DateTime day, List<Expense> expenses) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(top: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header của ngày
           Padding(
@@ -439,8 +557,13 @@ class DailyExpenseCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                      .format(dayTotal),
+                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(
+                      expenses.fold(
+                          0.0,
+                          (sum, e) =>
+                              e.category.type == tt.TransactionType.expense
+                                  ? sum - e.amount
+                                  : sum + e.amount)),
                   style: const TextStyle(
                       color: Colors.black87,
                       fontSize: 16,
@@ -450,54 +573,7 @@ class DailyExpenseCard extends StatelessWidget {
             ),
           ),
           // Danh sách các giao dịch trong ngày
-          ...expenses.map((e) => _buildExpenseTile(e)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpenseTile(Expense expense) {
-    final isExpense = expense.category.type == tt.TransactionType.expense;
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: expense.category.color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              IconMapper.getIcon(expense.category.icon),
-              color: expense.category.color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              expense.category.name,
-              style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500),
-            ),
-          ),
-          Text(
-            NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                .format(expense.amount),
-            style: TextStyle(
-              color: isExpense ? Colors.red : Colors.green,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          ...expenses.map((e) => buildExpenseTile(e)),
         ],
       ),
     );
