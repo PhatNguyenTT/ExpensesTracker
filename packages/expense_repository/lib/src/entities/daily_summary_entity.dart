@@ -1,5 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Entity để lưu trữ thống kê ngày trên Firestore
 class DailySummaryEntity {
   String summaryId;
+  String walletId;
   DateTime date;
   int totalIncome;
   int totalExpense;
@@ -9,6 +13,7 @@ class DailySummaryEntity {
 
   DailySummaryEntity({
     required this.summaryId,
+    required this.walletId,
     required this.date,
     required this.totalIncome,
     required this.totalExpense,
@@ -17,28 +22,29 @@ class DailySummaryEntity {
     required this.lastUpdated,
   });
 
-  Map<String, Object?> toDocument() {
+  Map<String, Object?> toJson() {
     return {
       'summaryId': summaryId,
-      'date': date.millisecondsSinceEpoch,
+      'walletId': walletId,
+      'date': Timestamp.fromDate(date),
       'totalIncome': totalIncome,
       'totalExpense': totalExpense,
       'balance': balance,
       'transactionCount': transactionCount,
-      'lastUpdated': lastUpdated.millisecondsSinceEpoch,
+      'lastUpdated': Timestamp.fromDate(lastUpdated),
     };
   }
 
-  static DailySummaryEntity fromDocument(Map<String, dynamic> doc) {
+  static DailySummaryEntity fromJson(Map<String, dynamic> json) {
     return DailySummaryEntity(
-      summaryId: doc['summaryId'] as String,
-      date: DateTime.fromMillisecondsSinceEpoch(doc['date'] as int),
-      totalIncome: doc['totalIncome'] as int,
-      totalExpense: doc['totalExpense'] as int,
-      balance: doc['balance'] as int,
-      transactionCount: doc['transactionCount'] as int,
-      lastUpdated:
-          DateTime.fromMillisecondsSinceEpoch(doc['lastUpdated'] as int),
+      summaryId: json['summaryId'] as String,
+      walletId: json['walletId'] as String,
+      date: (json['date'] as Timestamp).toDate(),
+      totalIncome: json['totalIncome'] as int,
+      totalExpense: json['totalExpense'] as int,
+      balance: json['balance'] as int,
+      transactionCount: json['transactionCount'] as int,
+      lastUpdated: (json['lastUpdated'] as Timestamp).toDate(),
     );
   }
 }

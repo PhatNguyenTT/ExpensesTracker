@@ -1,5 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Entity để lưu trữ thống kê danh mục trên Firestore
 class CategorySummaryEntity {
   String summaryId;
+  String walletId;
   String categoryId;
   String categoryName;
   String type; // 'income' hoặc 'expense'
@@ -12,6 +16,7 @@ class CategorySummaryEntity {
 
   CategorySummaryEntity({
     required this.summaryId,
+    required this.walletId,
     required this.categoryId,
     required this.categoryName,
     required this.type,
@@ -23,9 +28,10 @@ class CategorySummaryEntity {
     required this.lastUpdated,
   });
 
-  Map<String, Object?> toDocument() {
+  Map<String, Object?> toJson() {
     return {
       'summaryId': summaryId,
+      'walletId': walletId,
       'categoryId': categoryId,
       'categoryName': categoryName,
       'type': type,
@@ -34,23 +40,23 @@ class CategorySummaryEntity {
       'totalAmount': totalAmount,
       'transactionCount': transactionCount,
       'averageAmount': averageAmount,
-      'lastUpdated': lastUpdated.millisecondsSinceEpoch,
+      'lastUpdated': Timestamp.fromDate(lastUpdated),
     };
   }
 
-  static CategorySummaryEntity fromDocument(Map<String, dynamic> doc) {
+  static CategorySummaryEntity fromJson(Map<String, dynamic> json) {
     return CategorySummaryEntity(
-      summaryId: doc['summaryId'] as String,
-      categoryId: doc['categoryId'] as String,
-      categoryName: doc['categoryName'] as String,
-      type: doc['type'] as String,
-      year: doc['year'] as int,
-      month: doc['month'] as int?,
-      totalAmount: doc['totalAmount'] as int,
-      transactionCount: doc['transactionCount'] as int,
-      averageAmount: (doc['averageAmount'] as num).toDouble(),
-      lastUpdated:
-          DateTime.fromMillisecondsSinceEpoch(doc['lastUpdated'] as int),
+      summaryId: json['summaryId'] as String,
+      walletId: json['walletId'] as String,
+      categoryId: json['categoryId'] as String,
+      categoryName: json['categoryName'] as String,
+      type: json['type'] as String,
+      year: json['year'] as int,
+      month: json['month'] as int?,
+      totalAmount: json['totalAmount'] as int,
+      transactionCount: json['transactionCount'] as int,
+      averageAmount: (json['averageAmount'] as num).toDouble(),
+      lastUpdated: (json['lastUpdated'] as Timestamp).toDate(),
     );
   }
 }

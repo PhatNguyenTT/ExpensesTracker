@@ -1,7 +1,8 @@
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
+import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/get/get_expenses_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/get_summary_bloc/get_summary_bloc.dart';
-import 'package:expenses_tracker/screens/settings/blocs/initial_balance_bloc/initial_balance_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'screens/home/views/homeScreen.dart';
@@ -17,17 +18,21 @@ class MyAppView extends StatelessWidget {
         providers: [
           BlocProvider(
             create: (context) =>
-                GetExpensesBloc(context.read<ExpenseRepository>())
-                  ..add(GetExpenses()),
+                ActiveWalletBloc(context.read<ExpenseRepository>())
+                  ..add(LoadActiveWallet()),
           ),
           BlocProvider(
             create: (context) =>
-                GetSummaryBloc(context.read<ExpenseRepository>())
-                  ..add(GetOverallSummary()),
+                GetCategoriesBloc(context.read<ExpenseRepository>())
+                  ..add(GetCategories()),
           ),
           BlocProvider(
-            create: (context) => InitialBalanceBloc(
-                expenseRepository: context.read<ExpenseRepository>()),
+            create: (context) =>
+                GetExpensesBloc(context.read<ExpenseRepository>()),
+          ),
+          BlocProvider(
+            create: (context) =>
+                GetSummaryBloc(context.read<ExpenseRepository>()),
           ),
         ],
         child: MaterialApp(

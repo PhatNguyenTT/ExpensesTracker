@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Entity để lưu trữ thống kê tổng hợp của ví trên Firestore
 class OverallSummaryEntity {
-  String summaryId;
+  String summaryId; // ID chính là walletId
   int totalIncome;
   int totalExpense;
   int balance;
@@ -19,32 +22,30 @@ class OverallSummaryEntity {
     required this.lastUpdated,
   });
 
-  Map<String, Object?> toDocument() {
+  Map<String, Object?> toJson() {
     return {
       'summaryId': summaryId,
       'totalIncome': totalIncome,
       'totalExpense': totalExpense,
       'balance': balance,
       'totalTransactionCount': totalTransactionCount,
-      'firstTransactionDate': firstTransactionDate.millisecondsSinceEpoch,
-      'lastTransactionDate': lastTransactionDate.millisecondsSinceEpoch,
-      'lastUpdated': lastUpdated.millisecondsSinceEpoch,
+      'firstTransactionDate': Timestamp.fromDate(firstTransactionDate),
+      'lastTransactionDate': Timestamp.fromDate(lastTransactionDate),
+      'lastUpdated': Timestamp.fromDate(lastUpdated),
     };
   }
 
-  static OverallSummaryEntity fromDocument(Map<String, dynamic> doc) {
+  static OverallSummaryEntity fromJson(Map<String, dynamic> json) {
     return OverallSummaryEntity(
-      summaryId: doc['summaryId'] as String,
-      totalIncome: doc['totalIncome'] as int,
-      totalExpense: doc['totalExpense'] as int,
-      balance: doc['balance'] as int,
-      totalTransactionCount: doc['totalTransactionCount'] as int,
-      firstTransactionDate: DateTime.fromMillisecondsSinceEpoch(
-          doc['firstTransactionDate'] as int),
-      lastTransactionDate: DateTime.fromMillisecondsSinceEpoch(
-          doc['lastTransactionDate'] as int),
-      lastUpdated:
-          DateTime.fromMillisecondsSinceEpoch(doc['lastUpdated'] as int),
+      summaryId: json['summaryId'] as String,
+      totalIncome: json['totalIncome'] as int,
+      totalExpense: json['totalExpense'] as int,
+      balance: json['balance'] as int,
+      totalTransactionCount: json['totalTransactionCount'] as int,
+      firstTransactionDate:
+          (json['firstTransactionDate'] as Timestamp).toDate(),
+      lastTransactionDate: (json['lastTransactionDate'] as Timestamp).toDate(),
+      lastUpdated: (json['lastUpdated'] as Timestamp).toDate(),
     );
   }
 }

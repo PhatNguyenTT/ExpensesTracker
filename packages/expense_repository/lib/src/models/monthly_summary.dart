@@ -1,8 +1,9 @@
 import '../entities/monthly_summary_entity.dart';
 
-/// Thống kê tổng hợp theo tháng
+/// Thống kê tổng hợp theo tháng cho từng ví
 class MonthlySummary {
-  String summaryId; // Format: "YYYY-MM" (VD: "2024-03")
+  String summaryId; // Format: "walletId_YYYY-MM"
+  String walletId; // 👈 Thêm ID của ví
   int year;
   int month;
   int totalIncome; // Tổng thu nhập trong tháng
@@ -13,6 +14,7 @@ class MonthlySummary {
 
   MonthlySummary({
     required this.summaryId,
+    required this.walletId, // 👈
     required this.year,
     required this.month,
     required this.totalIncome,
@@ -24,6 +26,7 @@ class MonthlySummary {
 
   static final empty = MonthlySummary(
     summaryId: '',
+    walletId: '', // 👈
     year: DateTime.now().year,
     month: DateTime.now().month,
     totalIncome: 0,
@@ -33,13 +36,14 @@ class MonthlySummary {
     lastUpdated: DateTime.now(),
   );
 
-  /// Tạo summaryId từ year và month
-  static String generateId(int year, int month) {
-    return '${year.toString()}-${month.toString().padLeft(2, '0')}';
+  /// Tạo summaryId từ walletId, year và month
+  static String generateId(String walletId, int year, int month) {
+    return '${walletId}_${year.toString()}-${month.toString().padLeft(2, '0')}';
   }
 
   MonthlySummary copyWith({
     String? summaryId,
+    String? walletId, // 👈
     int? year,
     int? month,
     int? totalIncome,
@@ -50,6 +54,7 @@ class MonthlySummary {
   }) {
     return MonthlySummary(
       summaryId: summaryId ?? this.summaryId,
+      walletId: walletId ?? this.walletId, // 👈
       year: year ?? this.year,
       month: month ?? this.month,
       totalIncome: totalIncome ?? this.totalIncome,
@@ -63,6 +68,7 @@ class MonthlySummary {
   MonthlySummaryEntity toEntity() {
     return MonthlySummaryEntity(
       summaryId: summaryId,
+      walletId: walletId, // 👈
       year: year,
       month: month,
       totalIncome: totalIncome,
@@ -76,6 +82,7 @@ class MonthlySummary {
   static MonthlySummary fromEntity(MonthlySummaryEntity entity) {
     return MonthlySummary(
       summaryId: entity.summaryId,
+      walletId: entity.walletId, // 👈
       year: entity.year,
       month: entity.month,
       totalIncome: entity.totalIncome,

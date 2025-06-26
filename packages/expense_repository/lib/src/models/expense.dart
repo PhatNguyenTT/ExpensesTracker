@@ -1,7 +1,9 @@
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expense_repository/src/models/wallet.dart';
 
 class Expense {
   String expenseId;
+  String walletId;
   Category category;
   DateTime date;
   int amount;
@@ -9,6 +11,7 @@ class Expense {
 
   Expense({
     required this.expenseId,
+    required this.walletId,
     required this.category,
     required this.date,
     required this.amount,
@@ -17,6 +20,7 @@ class Expense {
 
   static final empty = Expense(
     expenseId: '',
+    walletId: '',
     category: Category.empty,
     date: DateTime.now(),
     amount: 0,
@@ -26,6 +30,7 @@ class Expense {
   ExpenseEntity toEntity() {
     return ExpenseEntity(
       expenseId: expenseId,
+      walletId: walletId,
       category: category,
       date: date,
       amount: amount,
@@ -36,6 +41,7 @@ class Expense {
   static Expense fromEntity(ExpenseEntity entity) {
     return Expense(
       expenseId: entity.expenseId,
+      walletId: entity.walletId,
       category: entity.category,
       date: entity.date,
       amount: entity.amount,
@@ -46,6 +52,7 @@ class Expense {
   // ✅ Thêm phương thức copyWith
   Expense copyWith({
     String? expenseId,
+    String? walletId,
     Category? category,
     DateTime? date,
     int? amount,
@@ -53,6 +60,7 @@ class Expense {
   }) {
     return Expense(
       expenseId: expenseId ?? this.expenseId,
+      walletId: walletId ?? this.walletId,
       category: category ?? this.category,
       date: date ?? this.date,
       amount: amount ?? this.amount,

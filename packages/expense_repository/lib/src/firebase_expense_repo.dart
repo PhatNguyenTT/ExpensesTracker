@@ -1,12 +1,15 @@
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expense_repository/src/entities/wallet_entity.dart';
+import 'package:expense_repository/src/models/wallet.dart';
 import 'summary_service.dart';
 
 class FirebaseExpenseRepo implements ExpenseRepository {
   final categoryCollection =
       FirebaseFirestore.instance.collection('categories');
   final expenseCollection = FirebaseFirestore.instance.collection('expenses');
+  final walletCollection = FirebaseFirestore.instance.collection('wallets');
 
   // ========== SUMMARY COLLECTIONS ==========
   final overallSummaryCollection =
@@ -20,9 +23,96 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   final categorySummaryCollection =
       FirebaseFirestore.instance.collection('category_summaries');
 
-  // ========== INITIAL BALANCE COLLECTION ==========
-  final initialBalanceCollection =
-      FirebaseFirestore.instance.collection('initial_balance');
+  // ========== WALLET OPERATIONS ==========
+  @override
+  Future<void> createWallet(Wallet wallet) async {
+    try {
+      await walletCollection
+          .doc(wallet.walletId)
+          .set(wallet.toEntity().toJson());
+    } catch (e) {
+      log(e.toString());
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Wallet>> getWallets() async {
+    try {
+      return await walletCollection.get().then((snapshot) => snapshot.docs
+          .map((doc) => Wallet.fromEntity(
+              WalletEntity.fromJson(doc.data() as Map<String, dynamic>)))
+          .toList());
+    } catch (e) {
+      log(e.toString());
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Wallet?> getWallet(String walletId) async {
+    try {
+      final doc = await walletCollection.doc(walletId).get();
+      if (doc.exists) {
+        return Wallet.fromEntity(
+            WalletEntity.fromJson(doc.data()! as Map<String, dynamic>));
+      }
+      return null;
+    } catch (e) {
+      log(e.toString());
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateWallet(Wallet wallet) async {
+    try {
+      await walletCollection
+          .doc(wallet.walletId)
+          .update(wallet.toEntity().toJson());
+    } catch (e) {
+      log('Error updating wallet: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteWallet(String walletId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+
+      // 1. Delete all expenses in the wallet
+      final expensesSnapshot =
+          await expenseCollection.where('walletId', isEqualTo: walletId).get();
+      for (final doc in expensesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 2. Delete all summaries for the wallet
+      final summaryCollections = [
+        dailySummaryCollection,
+        monthlySummaryCollection,
+        yearlySummaryCollection,
+        categorySummaryCollection
+      ];
+      for (final collection in summaryCollections) {
+        final summarySnapshot =
+            await collection.where('walletId', isEqualTo: walletId).get();
+        for (final doc in summarySnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+      }
+      batch.delete(overallSummaryCollection.doc(walletId));
+
+      // 3. Delete the wallet itself
+      batch.delete(walletCollection.doc(walletId));
+
+      await batch.commit();
+    } catch (e) {
+      log('Error deleting wallet: $e');
+      rethrow;
+    }
+  }
 
   // ========== CATEGORY OPERATIONS ==========
   @override
@@ -30,7 +120,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       await categoryCollection
           .doc(category.categoryId)
-          .set(category.toEntity().toDocument());
+          .set(category.toEntity().toJson());
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -41,8 +131,8 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   Future<List<Category>> getCategory() async {
     try {
       return await categoryCollection.get().then((value) => value.docs
-          .map(
-              (e) => Category.fromEntity(CategoryEntity.fromDocument(e.data())))
+          .map((e) => Category.fromEntity(
+              CategoryEntity.fromJson(e.data() as Map<String, dynamic>)))
           .toList());
     } catch (e) {
       log(e.toString());
@@ -55,7 +145,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       await categoryCollection
           .doc(category.categoryId)
-          .update(category.toEntity().toDocument());
+          .update(category.toEntity().toJson());
     } catch (e) {
       log('Error updating category: $e');
       rethrow;
@@ -77,14 +167,18 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   }
 
   @override
-  Future<List<Expense>> getExpensesByCategory(String categoryId) async {
+  Future<List<Expense>> getExpensesByCategory(String categoryId,
+      {String? walletId}) async {
     try {
-      final snapshot = await expenseCollection
-          .where('category.categoryId', isEqualTo: categoryId)
-          .get();
+      Query query =
+          expenseCollection.where('category.categoryId', isEqualTo: categoryId);
+      if (walletId != null) {
+        query = query.where('walletId', isEqualTo: walletId);
+      }
+      final snapshot = await query.get();
       return snapshot.docs
-          .map((doc) =>
-              Expense.fromEntity(ExpenseEntity.fromDocument(doc.data())))
+          .map((doc) => Expense.fromEntity(
+              ExpenseEntity.fromJson(doc.data() as Map<String, dynamic>)))
           .toList();
     } catch (e) {
       log(e.toString());
@@ -97,7 +191,6 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       log('🗑️ Attempting to delete category: $categoryId');
 
-      // 1. Kiểm tra xem category có đang được sử dụng không
       final isInUse = await isCategoryInUse(categoryId);
       if (isInUse) {
         log('❌ Cannot delete category: still in use by expenses');
@@ -105,20 +198,17 @@ class FirebaseExpenseRepo implements ExpenseRepository {
             'Category đang được sử dụng bởi các giao dịch. Vui lòng xóa các giao dịch liên quan trước.');
       }
 
-      // 2. Xóa tất cả category summaries liên quan
+      final batch = FirebaseFirestore.instance.batch();
       final categorySummariesSnapshot = await categorySummaryCollection
           .where('categoryId', isEqualTo: categoryId)
           .get();
 
-      final batch = FirebaseFirestore.instance.batch();
       for (final doc in categorySummariesSnapshot.docs) {
         batch.delete(doc.reference);
       }
 
-      // 3. Xóa category
       batch.delete(categoryCollection.doc(categoryId));
 
-      // 4. Commit batch operation
       await batch.commit();
 
       log('✅ Successfully deleted category and related summaries');
@@ -132,12 +222,10 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   @override
   Future<void> createExpense(Expense expense) async {
     try {
-      // 1. Tạo expense
       await expenseCollection
           .doc(expense.expenseId)
-          .set(expense.toEntity().toDocument());
+          .set(expense.toEntity().toJson());
 
-      // 2. Auto-update summaries
       await updateSummariesForExpense(expense);
     } catch (e) {
       log(e.toString());
@@ -146,11 +234,18 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   }
 
   @override
-  Future<List<Expense>> getExpenses() async {
+  Future<List<Expense>> getExpenses({String? walletId}) async {
     try {
-      return await expenseCollection.get().then((value) => value.docs
-          .map((e) => Expense.fromEntity(ExpenseEntity.fromDocument(e.data())))
-          .toList());
+      Query query = expenseCollection;
+      if (walletId != null) {
+        query = query.where('walletId', isEqualTo: walletId);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((e) => Expense.fromEntity(
+              ExpenseEntity.fromJson(e.data() as Map<String, dynamic>)))
+          .toList();
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -160,21 +255,18 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   @override
   Future<void> updateExpense(Expense expense) async {
     try {
-      // 1. Lấy expense cũ để so sánh
       final oldExpenseDoc =
           await expenseCollection.doc(expense.expenseId).get();
       Expense? oldExpense;
       if (oldExpenseDoc.exists) {
-        oldExpense = Expense.fromEntity(
-            ExpenseEntity.fromDocument(oldExpenseDoc.data()!));
+        oldExpense = Expense.fromEntity(ExpenseEntity.fromJson(
+            oldExpenseDoc.data()! as Map<String, dynamic>));
       }
 
-      // 2. Update expense
       await expenseCollection
           .doc(expense.expenseId)
-          .update(expense.toEntity().toDocument());
+          .update(expense.toEntity().toJson());
 
-      // 3. Auto-update summaries
       await updateSummariesForExpense(expense, oldExpense: oldExpense);
     } catch (e) {
       log(e.toString());
@@ -185,16 +277,13 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   @override
   Future<void> deleteExpense(String expenseId) async {
     try {
-      // 1. Lấy expense để update summaries
       final expenseDoc = await expenseCollection.doc(expenseId).get();
       if (expenseDoc.exists) {
-        final expense =
-            Expense.fromEntity(ExpenseEntity.fromDocument(expenseDoc.data()!));
+        final expense = Expense.fromEntity(
+            ExpenseEntity.fromJson(expenseDoc.data()! as Map<String, dynamic>));
 
-        // 2. Delete expense
         await expenseCollection.doc(expenseId).delete();
 
-        // 3. Auto-update summaries
         await updateSummariesForExpense(expense, isDelete: true);
       }
     } catch (e) {
@@ -203,86 +292,19 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     }
   }
 
-  // ========== INITIAL BALANCE OPERATIONS ==========
-  @override
-  Future<InitialBalance?> getInitialBalance() async {
-    try {
-      final doc = await initialBalanceCollection.doc('initial').get();
-      if (doc.exists) {
-        return InitialBalance.fromEntity(
-            InitialBalanceEntity.fromDocument(doc.data()!));
-      }
-      return null;
-    } catch (e) {
-      log('Error getting initial balance: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<void> setInitialBalance(InitialBalance initialBalance) async {
-    try {
-      await initialBalanceCollection
-          .doc('initial')
-          .set(initialBalance.toEntity().toDocument());
-      log('✅ Initial balance set: ${initialBalance.amount}');
-    } catch (e) {
-      log('Error setting initial balance: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<void> updateInitialBalance(InitialBalance initialBalance) async {
-    try {
-      await initialBalanceCollection
-          .doc('initial')
-          .update(initialBalance.toEntity().toDocument());
-      log('✅ Initial balance updated: ${initialBalance.amount}');
-    } catch (e) {
-      log('Error updating initial balance: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<void> clearInitialBalance() async {
-    try {
-      final emptyBalance = InitialBalance.empty.copyWith(
-        lastUpdated: DateTime.now(),
-      );
-      await setInitialBalance(emptyBalance);
-      log('✅ Initial balance cleared');
-    } catch (e) {
-      log('Error clearing initial balance: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<bool> hasInitialBalance() async {
-    try {
-      final initialBalance = await getInitialBalance();
-      return initialBalance?.hasInitialBalance ?? false;
-    } catch (e) {
-      log('Error checking initial balance: $e');
-      return false;
-    }
-  }
-
   // ========== OVERALL SUMMARY ==========
   @override
-  Future<OverallSummary> getOverallSummary() async {
+  Future<OverallSummary> getOverallSummary(String walletId) async {
     try {
-      final doc = await overallSummaryCollection.doc('overall').get();
+      final doc = await overallSummaryCollection.doc(walletId).get();
       if (doc.exists) {
         return OverallSummary.fromEntity(
-            OverallSummaryEntity.fromDocument(doc.data()!));
+            OverallSummaryEntity.fromJson(doc.data()! as Map<String, dynamic>));
       } else {
-        // Nếu chưa có, tính toán từ expenses và tạo mới
-        final expenses = await getExpenses();
-        final summary = SummaryService.calculateOverallSummary(expenses);
-        await updateOverallSummary(summary);
+        final expenses = await getExpenses(walletId: walletId);
+        final summary =
+            SummaryService.calculateOverallSummary(expenses, walletId);
+        await upsertOverallSummary(summary);
         return summary;
       }
     } catch (e) {
@@ -292,27 +314,11 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   }
 
   @override
-  Future<OverallSummary> getOverallSummaryWithInitial() async {
-    try {
-      final [expenses, initialBalance] = await Future.wait([
-        getExpenses(),
-        getInitialBalance(),
-      ]);
-
-      return SummaryService.calculateOverallSummaryWithInitial(
-          expenses as List<Expense>, initialBalance as InitialBalance?);
-    } catch (e) {
-      log('Error getting overall summary with initial: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<void> updateOverallSummary(OverallSummary summary) async {
+  Future<void> upsertOverallSummary(OverallSummary summary) async {
     try {
       await overallSummaryCollection
-          .doc('overall')
-          .set(summary.toEntity().toDocument());
+          .doc(summary.summaryId)
+          .set(summary.toEntity().toJson());
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -321,14 +327,15 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   // ========== MONTHLY SUMMARY ==========
   @override
-  Future<MonthlySummary?> getMonthlySummary(int year, int month) async {
+  Future<MonthlySummary?> getMonthlySummary(
+      String walletId, int year, int month) async {
     try {
-      final summaryId = MonthlySummary.generateId(year, month);
+      final summaryId = MonthlySummary.generateId(walletId, year, month);
       final doc = await monthlySummaryCollection.doc(summaryId).get();
 
       if (doc.exists) {
         return MonthlySummary.fromEntity(
-            MonthlySummaryEntity.fromDocument(doc.data()!));
+            MonthlySummaryEntity.fromJson(doc.data()! as Map<String, dynamic>));
       }
       return null;
     } catch (e) {
@@ -338,42 +345,27 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> getMonthlyBalanceBreakdown(
-      int year, int month) async {
-    try {
-      final [expenses, initialBalance] = await Future.wait([
-        getExpenses(),
-        getInitialBalance(),
-      ]);
-
-      return SummaryService.calculateMonthlyBalanceBreakdown(
-          expenses as List<Expense>,
-          year,
-          month,
-          initialBalance as InitialBalance?);
-    } catch (e) {
-      log('Error getting monthly balance breakdown: $e');
-      rethrow;
-    }
-  }
-
-  @override
   Future<List<MonthlySummary>> getMonthlyRangeSummary(
-      DateTime startDate, DateTime endDate) async {
+      String walletId, DateTime startDate, DateTime endDate) async {
     try {
-      final startId =
-          MonthlySummary.generateId(startDate.year, startDate.month);
-      final endId = MonthlySummary.generateId(endDate.year, endDate.month);
-
       final snapshot = await monthlySummaryCollection
-          .where('summaryId', isGreaterThanOrEqualTo: startId)
-          .where('summaryId', isLessThanOrEqualTo: endId)
+          .where('walletId', isEqualTo: walletId)
+          .where('year', isGreaterThanOrEqualTo: startDate.year)
+          .where('year', isLessThanOrEqualTo: endDate.year)
           .get();
 
+      // Further filtering by month in Dart
       return snapshot.docs
-          .map((doc) => MonthlySummary.fromEntity(
-              MonthlySummaryEntity.fromDocument(doc.data())))
-          .toList();
+          .map((doc) => MonthlySummary.fromEntity(MonthlySummaryEntity.fromJson(
+              doc.data() as Map<String, dynamic>)))
+          .where((summary) {
+        final summaryDate = DateTime(summary.year, summary.month);
+        final start = DateTime(startDate.year, startDate.month);
+        final end = DateTime(endDate.year, endDate.month);
+        return summaryDate.isAfter(start) ||
+            summaryDate.isAtSameMomentAs(start) && summaryDate.isBefore(end) ||
+            summaryDate.isAtSameMomentAs(end);
+      }).toList();
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -385,7 +377,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       await monthlySummaryCollection
           .doc(summary.summaryId)
-          .set(summary.toEntity().toDocument());
+          .set(summary.toEntity().toJson());
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -394,14 +386,14 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   // ========== YEARLY SUMMARY ==========
   @override
-  Future<YearlySummary?> getYearlySummary(int year) async {
+  Future<YearlySummary?> getYearlySummary(String walletId, int year) async {
     try {
-      final summaryId = YearlySummary.generateId(year);
+      final summaryId = YearlySummary.generateId(walletId, year);
       final doc = await yearlySummaryCollection.doc(summaryId).get();
 
       if (doc.exists) {
         return YearlySummary.fromEntity(
-            YearlySummaryEntity.fromDocument(doc.data()!));
+            YearlySummaryEntity.fromJson(doc.data()! as Map<String, dynamic>));
       }
       return null;
     } catch (e) {
@@ -412,16 +404,17 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   @override
   Future<List<YearlySummary>> getYearlyRangeSummary(
-      int startYear, int endYear) async {
+      String walletId, int startYear, int endYear) async {
     try {
       final snapshot = await yearlySummaryCollection
+          .where('walletId', isEqualTo: walletId)
           .where('year', isGreaterThanOrEqualTo: startYear)
           .where('year', isLessThanOrEqualTo: endYear)
           .get();
 
       return snapshot.docs
           .map((doc) => YearlySummary.fromEntity(
-              YearlySummaryEntity.fromDocument(doc.data())))
+              YearlySummaryEntity.fromJson(doc.data() as Map<String, dynamic>)))
           .toList();
     } catch (e) {
       log(e.toString());
@@ -434,7 +427,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       await yearlySummaryCollection
           .doc(summary.summaryId)
-          .set(summary.toEntity().toDocument());
+          .set(summary.toEntity().toJson());
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -443,14 +436,14 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   // ========== DAILY SUMMARY ==========
   @override
-  Future<DailySummary?> getDailySummary(DateTime date) async {
+  Future<DailySummary?> getDailySummary(String walletId, DateTime date) async {
     try {
-      final summaryId = DailySummary.generateId(date);
+      final summaryId = DailySummary.generateId(walletId, date);
       final doc = await dailySummaryCollection.doc(summaryId).get();
 
       if (doc.exists) {
         return DailySummary.fromEntity(
-            DailySummaryEntity.fromDocument(doc.data()!));
+            DailySummaryEntity.fromJson(doc.data()! as Map<String, dynamic>));
       }
       return null;
     } catch (e) {
@@ -461,19 +454,20 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   @override
   Future<List<DailySummary>> getDailyRangeSummary(
-      DateTime startDate, DateTime endDate) async {
+      String walletId, DateTime startDate, DateTime endDate) async {
     try {
-      final startTimestamp = startDate.millisecondsSinceEpoch;
-      final endTimestamp = endDate.millisecondsSinceEpoch;
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      final end = DateTime(endDate.year, endDate.month, endDate.day);
 
       final snapshot = await dailySummaryCollection
-          .where('date', isGreaterThanOrEqualTo: startTimestamp)
-          .where('date', isLessThanOrEqualTo: endTimestamp)
+          .where('walletId', isEqualTo: walletId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
           .get();
 
       return snapshot.docs
           .map((doc) => DailySummary.fromEntity(
-              DailySummaryEntity.fromDocument(doc.data())))
+              DailySummaryEntity.fromJson(doc.data() as Map<String, dynamic>)))
           .toList();
     } catch (e) {
       log(e.toString());
@@ -486,7 +480,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       await dailySummaryCollection
           .doc(summary.summaryId)
-          .set(summary.toEntity().toDocument());
+          .set(summary.toEntity().toJson());
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -496,16 +490,18 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   // ========== CATEGORY SUMMARY ==========
   @override
   Future<List<CategorySummary>> getCategorySummaryByMonth(
-      int year, int month) async {
+      String walletId, int year, int month) async {
     try {
       final snapshot = await categorySummaryCollection
+          .where('walletId', isEqualTo: walletId)
           .where('year', isEqualTo: year)
           .where('month', isEqualTo: month)
           .get();
 
       return snapshot.docs
           .map((doc) => CategorySummary.fromEntity(
-              CategorySummaryEntity.fromDocument(doc.data())))
+              CategorySummaryEntity.fromJson(
+                  doc.data() as Map<String, dynamic>)))
           .toList();
     } catch (e) {
       log(e.toString());
@@ -514,16 +510,19 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   }
 
   @override
-  Future<List<CategorySummary>> getCategorySummaryByYear(int year) async {
+  Future<List<CategorySummary>> getCategorySummaryByYear(
+      String walletId, int year) async {
     try {
       final snapshot = await categorySummaryCollection
+          .where('walletId', isEqualTo: walletId)
           .where('year', isEqualTo: year)
-          .where('month', isNull: true) // Yearly summaries have null month
+          .where('month', isNull: true)
           .get();
 
       return snapshot.docs
           .map((doc) => CategorySummary.fromEntity(
-              CategorySummaryEntity.fromDocument(doc.data())))
+              CategorySummaryEntity.fromJson(
+                  doc.data() as Map<String, dynamic>)))
           .toList();
     } catch (e) {
       log(e.toString());
@@ -533,17 +532,17 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   @override
   Future<CategorySummary?> getCategorySummary(
-      String categoryId, int year, int? month) async {
+      String walletId, String categoryId, int year, int? month) async {
     try {
       final summaryId = month != null
-          ? CategorySummary.generateMonthlyId(categoryId, year, month)
-          : CategorySummary.generateYearlyId(categoryId, year);
+          ? CategorySummary.generateMonthlyId(walletId, categoryId, year, month)
+          : CategorySummary.generateYearlyId(walletId, categoryId, year);
 
       final doc = await categorySummaryCollection.doc(summaryId).get();
 
       if (doc.exists) {
-        return CategorySummary.fromEntity(
-            CategorySummaryEntity.fromDocument(doc.data()!));
+        return CategorySummary.fromEntity(CategorySummaryEntity.fromJson(
+            doc.data()! as Map<String, dynamic>));
       }
       return null;
     } catch (e) {
@@ -557,7 +556,7 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     try {
       await categorySummaryCollection
           .doc(summary.summaryId)
-          .set(summary.toEntity().toDocument());
+          .set(summary.toEntity().toJson());
     } catch (e) {
       log(e.toString());
       rethrow;
@@ -566,15 +565,15 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   // ========== BALANCE CALCULATIONS ==========
   @override
-  Future<int> getRealBalanceAtDate(DateTime date) async {
+  Future<int> getRealBalanceAtDate(String walletId, DateTime date) async {
     try {
-      final [expenses, initialBalance] = await Future.wait([
-        getExpenses(),
-        getInitialBalance(),
+      final [wallet, expenses] = await Future.wait([
+        getWallet(walletId),
+        getExpenses(walletId: walletId),
       ]);
 
       return SummaryService.calculateRealBalanceAtDate(
-          expenses as List<Expense>, date, initialBalance as InitialBalance?);
+          expenses as List<Expense>, date, wallet as Wallet?);
     } catch (e) {
       log('Error getting real balance at date: $e');
       rethrow;
@@ -582,9 +581,9 @@ class FirebaseExpenseRepo implements ExpenseRepository {
   }
 
   @override
-  Future<int> getCurrentRealBalance() async {
+  Future<int> getCurrentRealBalance(String walletId) async {
     try {
-      return await getRealBalanceAtDate(DateTime.now());
+      return await getRealBalanceAtDate(walletId, DateTime.now());
     } catch (e) {
       log('Error getting current real balance: $e');
       rethrow;
@@ -593,104 +592,87 @@ class FirebaseExpenseRepo implements ExpenseRepository {
 
   // ========== BATCH OPERATIONS ==========
   @override
-  Future<void> recalculateAllSummaries() async {
+  Future<void> recalculateSummariesForWallet(String walletId) async {
     try {
-      log('🔄 Starting recalculation of all summaries...');
+      log('🔄 Starting recalculation of all summaries for wallet $walletId...');
 
-      // 1. Lấy tất cả expenses
-      final expenses = await getExpenses();
-      log('📊 Loaded ${expenses.length} expenses');
+      final expenses = await getExpenses(walletId: walletId);
+      log('📊 Loaded ${expenses.length} expenses for wallet $walletId');
 
       if (expenses.isEmpty) {
-        log('⚠️ No expenses found, skipping summary calculation');
+        log('⚠️ No expenses found, skipping summary calculation for wallet $walletId');
         return;
       }
 
-      // 2. Tính toán Overall Summary
-      final overallSummary = SummaryService.calculateOverallSummary(expenses);
-      await updateOverallSummary(overallSummary);
-      log('✅ Updated overall summary');
+      final overallSummary =
+          SummaryService.calculateOverallSummary(expenses, walletId);
+      await upsertOverallSummary(overallSummary);
+      log('✅ Updated overall summary for wallet $walletId');
 
-      // 3. Group theo năm và tháng
       final Map<int, List<Expense>> byYear = {};
       final Map<String, List<Expense>> byMonth = {};
       final Map<String, List<Expense>> byDate = {};
 
       for (final expense in expenses) {
-        // Group by year
-        if (!byYear.containsKey(expense.date.year)) {
+        if (!byYear.containsKey(expense.date.year))
           byYear[expense.date.year] = [];
-        }
         byYear[expense.date.year]!.add(expense);
 
-        // Group by month
         final monthKey = '${expense.date.year}-${expense.date.month}';
-        if (!byMonth.containsKey(monthKey)) {
-          byMonth[monthKey] = [];
-        }
+        if (!byMonth.containsKey(monthKey)) byMonth[monthKey] = [];
         byMonth[monthKey]!.add(expense);
 
-        // Group by date
-        final dateKey = DailySummary.generateId(expense.date);
-        if (!byDate.containsKey(dateKey)) {
-          byDate[dateKey] = [];
-        }
+        final dateKey = DailySummary.generateId(walletId, expense.date);
+        if (!byDate.containsKey(dateKey)) byDate[dateKey] = [];
         byDate[dateKey]!.add(expense);
       }
 
-      // 4. Tính toán Yearly Summaries
       for (final entry in byYear.entries) {
         final year = entry.key;
         final yearExpenses = entry.value;
 
         final yearlySummary =
-            SummaryService.calculateYearlySummary(yearExpenses, year);
+            SummaryService.calculateYearlySummary(yearExpenses, walletId, year);
         await upsertYearlySummary(yearlySummary);
 
-        // Category summaries for year
         final categorySummaries =
             SummaryService.calculateAllCategorySummariesForYear(
-                yearExpenses, year);
+                yearExpenses, walletId, year);
         for (final catSummary in categorySummaries) {
           await upsertCategorySummary(catSummary);
         }
       }
-      log('✅ Updated yearly summaries for ${byYear.length} years');
+      log('✅ Updated yearly summaries for wallet $walletId');
 
-      // 5. Tính toán Monthly Summaries
       for (final entry in byMonth.entries) {
         final parts = entry.key.split('-');
         final year = int.parse(parts[0]);
         final month = int.parse(parts[1]);
         final monthExpenses = entry.value;
 
-        final monthlySummary =
-            SummaryService.calculateMonthlySummary(monthExpenses, year, month);
+        final monthlySummary = SummaryService.calculateMonthlySummary(
+            monthExpenses, walletId, year, month);
         await upsertMonthlySummary(monthlySummary);
 
-        // Category summaries for month
         final categorySummaries =
             SummaryService.calculateAllCategorySummariesForMonth(
-                monthExpenses, year, month);
+                monthExpenses, walletId, year, month);
         for (final catSummary in categorySummaries) {
           await upsertCategorySummary(catSummary);
         }
       }
-      log('✅ Updated monthly summaries for ${byMonth.length} months');
+      log('✅ Updated monthly summaries for wallet $walletId');
 
-      // 6. Tính toán Daily Summaries
       for (final entry in byDate.entries) {
-        final dateKey = entry.key;
         final dailyExpenses = entry.value;
         final date = dailyExpenses.first.date;
-
         final dailySummary =
-            SummaryService.calculateDailySummary(dailyExpenses, date);
+            SummaryService.calculateDailySummary(dailyExpenses, walletId, date);
         await upsertDailySummary(dailySummary);
       }
-      log('✅ Updated daily summaries for ${byDate.length} days');
+      log('✅ Updated daily summaries for wallet $walletId');
 
-      log('🎉 Successfully recalculated all summaries!');
+      log('🎉 Successfully recalculated all summaries for wallet $walletId!');
     } catch (e) {
       log('❌ Error in recalculateAllSummaries: $e');
       rethrow;
@@ -704,73 +686,66 @@ class FirebaseExpenseRepo implements ExpenseRepository {
     bool isDelete = false,
   }) async {
     try {
-      log('🔄 Updating summaries for expense: ${expense.expenseId}');
+      log('🔄 Updating summaries for expense: ${expense.expenseId} in wallet: ${expense.walletId}');
 
-      // Các ngày cần update (có thể khác nhau nếu update thay đổi ngày)
-      final datesToUpdate = <DateTime>{expense.date};
-      if (oldExpense != null) {
+      final Set<DateTime> datesToUpdate = {expense.date};
+      if (oldExpense != null && oldExpense.date != expense.date) {
         datesToUpdate.add(oldExpense.date);
       }
 
       for (final date in datesToUpdate) {
-        await _updateSummariesForDate(date);
+        await _updateSummariesForDate(expense.walletId, date);
       }
 
-      log('✅ Updated summaries successfully');
+      log('✅ Updated summaries successfully for wallet ${expense.walletId}');
     } catch (e) {
       log('❌ Error updating summaries: $e');
       rethrow;
     }
   }
 
-  /// Helper method để update summaries cho một ngày cụ thể
-  Future<void> _updateSummariesForDate(DateTime date) async {
-    // 1. Lấy tất cả expenses của ngày đó
-    final allExpenses = await getExpenses();
-    final dailyExpenses = SummaryService.filterByDate(allExpenses, date);
+  /// Helper method to update summaries for a specific date in a specific wallet
+  Future<void> _updateSummariesForDate(String walletId, DateTime date) async {
+    final allExpensesInWallet = await getExpenses(walletId: walletId);
 
-    // 2. Update Daily Summary
-    if (dailyExpenses.isNotEmpty) {
-      final dailySummary =
-          SummaryService.calculateDailySummary(dailyExpenses, date);
-      await upsertDailySummary(dailySummary);
+    // 1. Update Daily Summary
+    final dailyExpenses =
+        SummaryService.filterByDate(allExpensesInWallet, date);
+    final dailySummary =
+        SummaryService.calculateDailySummary(dailyExpenses, walletId, date);
+    await upsertDailySummary(dailySummary);
+
+    // 2. Update Monthly Summary
+    final monthlyExpenses = SummaryService.filterByMonth(
+        allExpensesInWallet, date.year, date.month);
+    final monthlySummary = SummaryService.calculateMonthlySummary(
+        monthlyExpenses, walletId, date.year, date.month);
+    await upsertMonthlySummary(monthlySummary);
+
+    final monthlyCategorySummaries =
+        SummaryService.calculateAllCategorySummariesForMonth(
+            monthlyExpenses, walletId, date.year, date.month);
+    for (final catSummary in monthlyCategorySummaries) {
+      await upsertCategorySummary(catSummary);
     }
 
-    // 3. Update Monthly Summary
-    final monthlyExpenses =
-        SummaryService.filterByMonth(allExpenses, date.year, date.month);
-    if (monthlyExpenses.isNotEmpty) {
-      final monthlySummary = SummaryService.calculateMonthlySummary(
-          monthlyExpenses, date.year, date.month);
-      await upsertMonthlySummary(monthlySummary);
+    // 3. Update Yearly Summary
+    final yearlyExpenses =
+        SummaryService.filterByYear(allExpensesInWallet, date.year);
+    final yearlySummary = SummaryService.calculateYearlySummary(
+        yearlyExpenses, walletId, date.year);
+    await upsertYearlySummary(yearlySummary);
 
-      // Update Category Summaries for month
-      final monthlyCategorySummaries =
-          SummaryService.calculateAllCategorySummariesForMonth(
-              monthlyExpenses, date.year, date.month);
-      for (final catSummary in monthlyCategorySummaries) {
-        await upsertCategorySummary(catSummary);
-      }
+    final yearlyCategorySummaries =
+        SummaryService.calculateAllCategorySummariesForYear(
+            yearlyExpenses, walletId, date.year);
+    for (final catSummary in yearlyCategorySummaries) {
+      await upsertCategorySummary(catSummary);
     }
 
-    // 4. Update Yearly Summary
-    final yearlyExpenses = SummaryService.filterByYear(allExpenses, date.year);
-    if (yearlyExpenses.isNotEmpty) {
-      final yearlySummary =
-          SummaryService.calculateYearlySummary(yearlyExpenses, date.year);
-      await upsertYearlySummary(yearlySummary);
-
-      // Update Category Summaries for year
-      final yearlyCategorySummaries =
-          SummaryService.calculateAllCategorySummariesForYear(
-              yearlyExpenses, date.year);
-      for (final catSummary in yearlyCategorySummaries) {
-        await upsertCategorySummary(catSummary);
-      }
-    }
-
-    // 5. Update Overall Summary
-    final overallSummary = SummaryService.calculateOverallSummary(allExpenses);
-    await updateOverallSummary(overallSummary);
+    // 4. Update Overall Summary
+    final overallSummary =
+        SummaryService.calculateOverallSummary(allExpensesInWallet, walletId);
+    await upsertOverallSummary(overallSummary);
   }
 }

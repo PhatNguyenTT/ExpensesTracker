@@ -1,8 +1,9 @@
 import '../entities/yearly_summary_entity.dart';
 
-/// Thống kê tổng hợp theo năm
+/// Thống kê tổng hợp theo năm cho từng ví
 class YearlySummary {
-  String summaryId; // Format: "YYYY" (VD: "2024")
+  String summaryId; // Format: "walletId_YYYY"
+  String walletId; // 👈 Thêm ID của ví
   int year;
   int totalIncome; // Tổng thu nhập trong năm
   int totalExpense; // Tổng chi tiêu trong năm
@@ -14,6 +15,7 @@ class YearlySummary {
 
   YearlySummary({
     required this.summaryId,
+    required this.walletId, // 👈
     required this.year,
     required this.totalIncome,
     required this.totalExpense,
@@ -26,6 +28,7 @@ class YearlySummary {
 
   static final empty = YearlySummary(
     summaryId: '',
+    walletId: '', // 👈
     year: DateTime.now().year,
     totalIncome: 0,
     totalExpense: 0,
@@ -36,13 +39,14 @@ class YearlySummary {
     lastUpdated: DateTime.now(),
   );
 
-  /// Tạo summaryId từ year
-  static String generateId(int year) {
-    return year.toString();
+  /// Tạo summaryId từ walletId và year
+  static String generateId(String walletId, int year) {
+    return '${walletId}_${year.toString()}';
   }
 
   YearlySummary copyWith({
     String? summaryId,
+    String? walletId, // 👈
     int? year,
     int? totalIncome,
     int? totalExpense,
@@ -54,6 +58,7 @@ class YearlySummary {
   }) {
     return YearlySummary(
       summaryId: summaryId ?? this.summaryId,
+      walletId: walletId ?? this.walletId, // 👈
       year: year ?? this.year,
       totalIncome: totalIncome ?? this.totalIncome,
       totalExpense: totalExpense ?? this.totalExpense,
@@ -69,6 +74,7 @@ class YearlySummary {
   YearlySummaryEntity toEntity() {
     return YearlySummaryEntity(
       summaryId: summaryId,
+      walletId: walletId, // 👈
       year: year,
       totalIncome: totalIncome,
       totalExpense: totalExpense,
@@ -83,6 +89,7 @@ class YearlySummary {
   static YearlySummary fromEntity(YearlySummaryEntity entity) {
     return YearlySummary(
       summaryId: entity.summaryId,
+      walletId: entity.walletId, // 👈
       year: entity.year,
       totalIncome: entity.totalIncome,
       totalExpense: entity.totalExpense,

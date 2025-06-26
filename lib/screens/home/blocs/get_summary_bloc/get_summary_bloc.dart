@@ -10,28 +10,40 @@ abstract class GetSummaryEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class GetOverallSummary extends GetSummaryEvent {}
+class GetOverallSummary extends GetSummaryEvent {
+  final String walletId;
+  const GetOverallSummary(this.walletId);
+  @override
+  List<Object> get props => [walletId];
+}
 
 class GetMonthlySummary extends GetSummaryEvent {
+  final String walletId;
   final int year;
   final int month;
 
-  const GetMonthlySummary(this.year, this.month);
+  const GetMonthlySummary(this.walletId, this.year, this.month);
 
   @override
-  List<Object> get props => [year, month];
+  List<Object> get props => [walletId, year, month];
 }
 
 class GetYearlySummary extends GetSummaryEvent {
+  final String walletId;
   final int year;
 
-  const GetYearlySummary(this.year);
+  const GetYearlySummary(this.walletId, this.year);
 
   @override
-  List<Object> get props => [year];
+  List<Object> get props => [walletId, year];
 }
 
-class RefreshSummaries extends GetSummaryEvent {}
+class RefreshSummaries extends GetSummaryEvent {
+  final String walletId;
+  const RefreshSummaries(this.walletId);
+  @override
+  List<Object> get props => [walletId];
+}
 
 // ========== STATES ==========
 abstract class GetSummaryState extends Equatable {
@@ -101,7 +113,7 @@ class GetSummaryBloc extends Bloc<GetSummaryEvent, GetSummaryState> {
   ) async {
     emit(GetSummaryLoading());
     try {
-      final summary = await _repository.getOverallSummaryWithInitial();
+      final summary = await _repository.getOverallSummary(event.walletId);
       emit(GetOverallSummarySuccess(summary));
     } catch (e) {
       emit(GetSummaryFailure(e.toString()));
@@ -114,8 +126,8 @@ class GetSummaryBloc extends Bloc<GetSummaryEvent, GetSummaryState> {
   ) async {
     emit(GetSummaryLoading());
     try {
-      final summary =
-          await _repository.getMonthlySummary(event.year, event.month);
+      final summary = await _repository.getMonthlySummary(
+          event.walletId, event.year, event.month);
       emit(GetMonthlySummarySuccess(summary, event.year, event.month));
     } catch (e) {
       emit(GetSummaryFailure(e.toString()));
@@ -128,7 +140,8 @@ class GetSummaryBloc extends Bloc<GetSummaryEvent, GetSummaryState> {
   ) async {
     emit(GetSummaryLoading());
     try {
-      final summary = await _repository.getYearlySummary(event.year);
+      final summary =
+          await _repository.getYearlySummary(event.walletId, event.year);
       emit(GetYearlySummarySuccess(summary, event.year));
     } catch (e) {
       emit(GetSummaryFailure(e.toString()));
@@ -142,7 +155,7 @@ class GetSummaryBloc extends Bloc<GetSummaryEvent, GetSummaryState> {
     emit(GetSummaryLoading());
     try {
       // Refresh overall summary by default
-      final summary = await _repository.getOverallSummaryWithInitial();
+      final summary = await _repository.getOverallSummary(event.walletId);
       emit(GetOverallSummarySuccess(summary));
     } catch (e) {
       emit(GetSummaryFailure(e.toString()));

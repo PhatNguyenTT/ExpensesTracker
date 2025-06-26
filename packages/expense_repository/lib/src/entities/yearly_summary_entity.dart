@@ -1,5 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Entity để lưu trữ thống kê năm trên Firestore
 class YearlySummaryEntity {
   String summaryId;
+  String walletId;
   int year;
   int totalIncome;
   int totalExpense;
@@ -11,6 +15,7 @@ class YearlySummaryEntity {
 
   YearlySummaryEntity({
     required this.summaryId,
+    required this.walletId,
     required this.year,
     required this.totalIncome,
     required this.totalExpense,
@@ -21,9 +26,10 @@ class YearlySummaryEntity {
     required this.lastUpdated,
   });
 
-  Map<String, Object?> toDocument() {
+  Map<String, Object?> toJson() {
     return {
       'summaryId': summaryId,
+      'walletId': walletId,
       'year': year,
       'totalIncome': totalIncome,
       'totalExpense': totalExpense,
@@ -31,22 +37,22 @@ class YearlySummaryEntity {
       'transactionCount': transactionCount,
       'averageMonthlyIncome': averageMonthlyIncome,
       'averageMonthlyExpense': averageMonthlyExpense,
-      'lastUpdated': lastUpdated.millisecondsSinceEpoch,
+      'lastUpdated': Timestamp.fromDate(lastUpdated),
     };
   }
 
-  static YearlySummaryEntity fromDocument(Map<String, dynamic> doc) {
+  static YearlySummaryEntity fromJson(Map<String, dynamic> json) {
     return YearlySummaryEntity(
-      summaryId: doc['summaryId'] as String,
-      year: doc['year'] as int,
-      totalIncome: doc['totalIncome'] as int,
-      totalExpense: doc['totalExpense'] as int,
-      balance: doc['balance'] as int,
-      transactionCount: doc['transactionCount'] as int,
-      averageMonthlyIncome: (doc['averageMonthlyIncome'] as num).toDouble(),
-      averageMonthlyExpense: (doc['averageMonthlyExpense'] as num).toDouble(),
-      lastUpdated:
-          DateTime.fromMillisecondsSinceEpoch(doc['lastUpdated'] as int),
+      summaryId: json['summaryId'] as String,
+      walletId: json['walletId'] as String,
+      year: json['year'] as int,
+      totalIncome: json['totalIncome'] as int,
+      totalExpense: json['totalExpense'] as int,
+      balance: json['balance'] as int,
+      transactionCount: json['transactionCount'] as int,
+      averageMonthlyIncome: json['averageMonthlyIncome'] as double,
+      averageMonthlyExpense: json['averageMonthlyExpense'] as double,
+      lastUpdated: (json['lastUpdated'] as Timestamp).toDate(),
     );
   }
 }

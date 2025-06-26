@@ -11,33 +11,37 @@ abstract class GetCategorySummaryEvent extends Equatable {
 }
 
 class GetCategorySummariesByMonth extends GetCategorySummaryEvent {
+  final String walletId;
   final int year;
   final int month;
 
-  const GetCategorySummariesByMonth(this.year, this.month);
+  const GetCategorySummariesByMonth(this.walletId, this.year, this.month);
 
   @override
-  List<Object> get props => [year, month];
+  List<Object> get props => [walletId, year, month];
 }
 
 class GetCategorySummariesByYear extends GetCategorySummaryEvent {
+  final String walletId;
   final int year;
 
-  const GetCategorySummariesByYear(this.year);
+  const GetCategorySummariesByYear(this.walletId, this.year);
 
   @override
-  List<Object> get props => [year];
+  List<Object> get props => [walletId, year];
 }
 
 class GetSpecificCategorySummary extends GetCategorySummaryEvent {
+  final String walletId;
   final String categoryId;
   final int year;
   final int? month;
 
-  const GetSpecificCategorySummary(this.categoryId, this.year, this.month);
+  const GetSpecificCategorySummary(
+      this.walletId, this.categoryId, this.year, this.month);
 
   @override
-  List<Object?> get props => [categoryId, year, month];
+  List<Object?> get props => [walletId, categoryId, year, month];
 }
 
 // ========== STATES ==========
@@ -103,8 +107,8 @@ class GetCategorySummaryBloc
   ) async {
     emit(GetCategorySummaryLoading());
     try {
-      final summaries =
-          await _repository.getCategorySummaryByMonth(event.year, event.month);
+      final summaries = await _repository.getCategorySummaryByMonth(
+          event.walletId, event.year, event.month);
       emit(GetCategorySummariesSuccess(summaries, event.year, event.month));
     } catch (e) {
       emit(GetCategorySummaryFailure(e.toString()));
@@ -117,7 +121,8 @@ class GetCategorySummaryBloc
   ) async {
     emit(GetCategorySummaryLoading());
     try {
-      final summaries = await _repository.getCategorySummaryByYear(event.year);
+      final summaries = await _repository.getCategorySummaryByYear(
+          event.walletId, event.year);
       emit(GetCategorySummariesSuccess(summaries, event.year, null));
     } catch (e) {
       emit(GetCategorySummaryFailure(e.toString()));
@@ -131,7 +136,7 @@ class GetCategorySummaryBloc
     emit(GetCategorySummaryLoading());
     try {
       final summary = await _repository.getCategorySummary(
-          event.categoryId, event.year, event.month);
+          event.walletId, event.categoryId, event.year, event.month);
       emit(GetSpecificCategorySummarySuccess(
           summary, event.categoryId, event.year, event.month));
     } catch (e) {

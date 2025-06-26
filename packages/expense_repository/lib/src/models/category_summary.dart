@@ -1,9 +1,11 @@
 import '../entities/category_summary_entity.dart';
 import 'transaction_type.dart';
 
-/// Thống kê tổng hợp theo danh mục và thời gian
+/// Thống kê tổng hợp theo danh mục và thời gian cho từng ví
 class CategorySummary {
-  String summaryId; // Format: "categoryId-YYYY-MM" hoặc "categoryId-YYYY"
+  String
+      summaryId; // Format: "walletId_categoryId_YYYY-MM" hoặc "walletId_categoryId_YYYY"
+  String walletId; // 👈 Thêm ID của ví
   String categoryId;
   String categoryName;
   TransactionType type;
@@ -16,6 +18,7 @@ class CategorySummary {
 
   CategorySummary({
     required this.summaryId,
+    required this.walletId, // 👈
     required this.categoryId,
     required this.categoryName,
     required this.type,
@@ -29,6 +32,7 @@ class CategorySummary {
 
   static final empty = CategorySummary(
     summaryId: '',
+    walletId: '', // 👈
     categoryId: '',
     categoryName: '',
     type: TransactionType.expense,
@@ -41,13 +45,14 @@ class CategorySummary {
   );
 
   /// Tạo summaryId cho thống kê tháng
-  static String generateMonthlyId(String categoryId, int year, int month) {
-    return '$categoryId-${year.toString()}-${month.toString().padLeft(2, '0')}';
+  static String generateMonthlyId(
+      String walletId, String categoryId, int year, int month) {
+    return '${walletId}_${categoryId}_${year.toString()}-${month.toString().padLeft(2, '0')}';
   }
 
   /// Tạo summaryId cho thống kê năm
-  static String generateYearlyId(String categoryId, int year) {
-    return '$categoryId-${year.toString()}';
+  static String generateYearlyId(String walletId, String categoryId, int year) {
+    return '${walletId}_${categoryId}_${year.toString()}';
   }
 
   /// Check xem có phải thống kê tháng không
@@ -58,6 +63,7 @@ class CategorySummary {
 
   CategorySummary copyWith({
     String? summaryId,
+    String? walletId, // 👈
     String? categoryId,
     String? categoryName,
     TransactionType? type,
@@ -70,6 +76,7 @@ class CategorySummary {
   }) {
     return CategorySummary(
       summaryId: summaryId ?? this.summaryId,
+      walletId: walletId ?? this.walletId, // 👈
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
       type: type ?? this.type,
@@ -85,6 +92,7 @@ class CategorySummary {
   CategorySummaryEntity toEntity() {
     return CategorySummaryEntity(
       summaryId: summaryId,
+      walletId: walletId, // 👈
       categoryId: categoryId,
       categoryName: categoryName,
       type: type.toJson(),
@@ -100,6 +108,7 @@ class CategorySummary {
   static CategorySummary fromEntity(CategorySummaryEntity entity) {
     return CategorySummary(
       summaryId: entity.summaryId,
+      walletId: entity.walletId, // 👈
       categoryId: entity.categoryId,
       categoryName: entity.categoryName,
       type: TransactionTypeExtension.fromString(entity.type),

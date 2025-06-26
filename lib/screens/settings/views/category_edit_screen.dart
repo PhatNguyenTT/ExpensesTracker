@@ -130,7 +130,40 @@ class _CategoryEditScreenState extends State<CategoryEditScreen> {
                     _buildSectionTitle('Biểu tượng'),
                     const SizedBox(height: 12),
                     _buildIconField(),
-                    if (_isIconExpanded && !_isCategoryInUse) _buildIconGrid(),
+                    if (_isIconExpanded && !_isCategoryInUse)
+                      Container(
+                        height: 280,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(16),
+                            bottomRight: Radius.circular(16),
+                          ),
+                          border: Border.all(color: Colors.grey[300]!),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: IconPickerGrid(
+                            icons: categoryIcons,
+                            scrollController: _scrollController,
+                            selectedIcon: _selectedIcon,
+                            onIconSelected: (icon) {
+                              setState(() {
+                                _selectedIcon = icon;
+                                _isIconExpanded = false;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 24),
 
                     // Color Section
@@ -351,41 +384,6 @@ class _CategoryEditScreenState extends State<CategoryEditScreen> {
               size: 20,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIconGrid() {
-    return Container(
-      height: 280,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
-        ),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: IconPickerGrid(
-          scrollController: _scrollController,
-          selectedIcon: _selectedIcon,
-          onIconSelected: (icon) {
-            setState(() {
-              _selectedIcon = icon;
-              _isIconExpanded = false;
-            });
-          },
         ),
       ),
     );

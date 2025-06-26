@@ -62,26 +62,12 @@ Future<Category?> getCategoryCreation(
                   borderRadius: BorderRadius.circular(20),
                 ),
                 title: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.add_circle_outline,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
                         'Tạo danh mục mới',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
@@ -251,6 +237,7 @@ Future<Category?> getCategoryCreation(
                             child: Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: IconPickerGrid(
+                                icons: categoryIcons,
                                 scrollController: scrollController,
                                 selectedIcon: selectedIcon,
                                 onIconSelected: (icon) {
@@ -367,59 +354,49 @@ Future<Category?> getCategoryCreation(
                           ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Nút lưu
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: isLoading
-                              ? Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Center(
-                                    child: SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : ElevatedButton(
-                                  onPressed: () => _validateAndCreateCategory(
-                                    context,
-                                    setState,
-                                    categoryNameController,
-                                    selectedIcon,
-                                    categoryColor,
-                                    type,
-                                    category,
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black87,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: const Text(
-                                    'Tạo danh mục',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                        ),
                       ],
                     ),
                   ),
                 ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                    },
+                    child: Text('Hủy',
+                        style: TextStyle(color: Colors.grey.shade700)),
+                  ),
+                  ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () => _validateAndCreateCategory(
+                              ctx,
+                              setState,
+                              categoryNameController,
+                              selectedIcon,
+                              categoryColor,
+                              type,
+                              category,
+                            ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black87,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Tạo'),
+                  )
+                ],
               ),
             );
           },

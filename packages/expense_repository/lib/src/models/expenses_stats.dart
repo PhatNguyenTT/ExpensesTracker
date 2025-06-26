@@ -1,5 +1,6 @@
 import 'package:expense_repository/expense_repository.dart';
 import 'package:expense_repository/src/models/transaction_type.dart';
+import 'package:expense_repository/src/models/wallet.dart';
 
 class ExpenseStats {
   final int totalIncome;
@@ -12,13 +13,9 @@ class ExpenseStats {
 
   int get balance => totalIncome - totalExpense;
 
-  /// Tính số dư thực với số dư ban đầu
-  int balanceWithInitial(int initialBalance) =>
-      initialBalance + totalIncome - totalExpense;
-
-  /// Tính số dư thực với InitialBalance object
-  int realBalance(InitialBalance? initialBalance) {
-    final initial = initialBalance?.amount ?? 0;
+  /// Tính số dư thực với số dư ban đầu của một ví
+  int realBalance(Wallet? wallet) {
+    final initial = wallet?.initialBalance ?? 0;
     return initial + totalIncome - totalExpense;
   }
 
@@ -28,12 +25,12 @@ class ExpenseStats {
         'balance': balance,
       };
 
-  Map<String, dynamic> toJsonWithInitial(int initialBalance) => {
+  Map<String, dynamic> toJsonWithInitial(Wallet? wallet) => {
         'totalIncome': totalIncome,
         'totalExpense': totalExpense,
         'balance': balance,
-        'initialBalance': initialBalance,
-        'realBalance': balanceWithInitial(initialBalance),
+        'initialBalance': wallet?.initialBalance ?? 0,
+        'realBalance': realBalance(wallet),
       };
 
   factory ExpenseStats.fromExpenses(List<Expense> expenses) {
@@ -56,9 +53,9 @@ class ExpenseStats {
 extension ExpenseStatsExtension on List<Expense> {
   ExpenseStats get stats => ExpenseStats.fromExpenses(this);
 
-  /// Tính số dư thực với initial balance
-  int realBalanceWith(InitialBalance? initialBalance) {
+  /// Tính số dư thực với một ví cụ thể
+  int realBalanceWith(Wallet? wallet) {
     final stats = ExpenseStats.fromExpenses(this);
-    return stats.realBalance(initialBalance);
+    return stats.realBalance(wallet);
   }
 }

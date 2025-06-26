@@ -1,9 +1,12 @@
 import 'dart:math';
 
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expense_repository/src/models/wallet.dart';
+import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/delete/delete_expense_bloc.dart';
 import 'package:expenses_tracker/screens/home/blocs/update/update_expense_bloc.dart';
 import 'package:expenses_tracker/screens/home/views/view_all_expenses.dart';
+import 'package:expenses_tracker/screens/home/views/wallet_selection_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,11 +19,13 @@ import 'package:expenses_tracker/utils/icon_mapper.dart';
 class MainScreen extends StatelessWidget {
   final List<Expense> expenses;
   final OverallSummary overallSummary;
+  final Wallet activeWallet;
 
   const MainScreen(
     this.expenses, {
     super.key,
     required this.overallSummary,
+    required this.activeWallet,
   });
 
   @override
@@ -80,109 +85,131 @@ class MainScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // ------------------ Balance Card ------------------
-          Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.width / 2,
-            decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.secondary,
-                    Theme.of(context).colorScheme.tertiary,
-                  ],
-                  transform: const GradientRotation(pi / 4),
-                ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade400,
-                    spreadRadius: 5,
-                    blurRadius: 7,
-                    offset: const Offset(0, 3),
-                  )
-                ]),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Tổng số dư',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 16,
-                        color: Colors.white)),
-                const SizedBox(height: 13),
-                Text(formatSignedCurrency(overallSummary.balance),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25,
-                        color: Colors.white)),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 13, horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Thu nhập
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 12.5,
-                            backgroundColor: Colors.white30,
-                            child: Icon(CupertinoIcons.arrow_down,
-                                size: 12, color: Colors.greenAccent),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Thu nhập',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 12,
-                                      color: Colors.white)),
-                              Text(
-                                  formatSignedCurrency(
-                                      overallSummary.totalIncome),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                      color: Colors.white)),
-                            ],
-                          )
-                        ],
-                      ),
-                      // Chi tiêu
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 12.5,
-                            backgroundColor: Colors.white30,
-                            child: Icon(CupertinoIcons.arrow_up,
-                                size: 12, color: Colors.red),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Chi tiêu',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: 12,
-                                      color: Colors.white)),
-                              Text(
-                                  formatSignedCurrency(
-                                      overallSummary.totalExpense),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                      color: Colors.white)),
-                            ],
-                          )
-                        ],
-                      )
-                    ],
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (ctx) => BlocProvider.value(
+                    value: BlocProvider.of<ActiveWalletBloc>(context),
+                    child: const WalletSelectionScreen(),
                   ),
                 ),
-              ],
+              );
+            },
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.width / 2,
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      activeWallet.color.withOpacity(0.8),
+                      activeWallet.color,
+                    ],
+                    transform: const GradientRotation(pi / 4),
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: activeWallet.color.withOpacity(0.4),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    )
+                  ]),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(IconMapper.getIcon(activeWallet.icon),
+                          color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(activeWallet.name,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: Colors.white)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                      formatSignedCurrency(
+                          overallSummary.balance + activeWallet.initialBalance),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 25,
+                          color: Colors.white)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 13, horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Thu nhập
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 12.5,
+                              backgroundColor: Colors.white30,
+                              child: Icon(CupertinoIcons.arrow_down,
+                                  size: 12, color: Colors.greenAccent),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Thu nhập',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 12,
+                                        color: Colors.white)),
+                                Text(
+                                    formatSignedCurrency(
+                                        overallSummary.totalIncome),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        color: Colors.white)),
+                              ],
+                            )
+                          ],
+                        ),
+                        // Chi tiêu
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 12.5,
+                              backgroundColor: Colors.white30,
+                              child: Icon(CupertinoIcons.arrow_up,
+                                  size: 12, color: Colors.red),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Chi tiêu',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 12,
+                                        color: Colors.white)),
+                                Text(
+                                    formatSignedCurrency(
+                                        overallSummary.totalExpense),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        color: Colors.white)),
+                              ],
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 40),

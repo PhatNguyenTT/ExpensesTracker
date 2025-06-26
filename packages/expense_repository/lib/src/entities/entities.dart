@@ -5,4 +5,3 @@ export 'yearly_summary_entity.dart';
 export 'category_summary_entity.dart';
 export 'daily_summary_entity.dart';
 export 'overall_summary_entity.dart';
-export 'initial_balance_entity.dart';

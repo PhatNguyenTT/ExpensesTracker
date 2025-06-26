@@ -1,12 +1,15 @@
 import 'package:expense_repository/expense_repository.dart';
+import 'package:expense_repository/src/models/wallet.dart';
 import 'models/transaction_type.dart';
 
 /// Service để tính toán summaries từ raw expenses data
 class SummaryService {
-  /// Tính toán OverallSummary từ danh sách expenses
-  static OverallSummary calculateOverallSummary(List<Expense> expenses) {
+  /// Tính toán OverallSummary từ danh sách expenses của một ví
+  static OverallSummary calculateOverallSummary(
+      List<Expense> expenses, String walletId) {
     if (expenses.isEmpty) {
-      return OverallSummary.empty.copyWith(lastUpdated: DateTime.now());
+      return OverallSummary.empty(walletId)
+          .copyWith(lastUpdated: DateTime.now());
     }
 
     int totalIncome = 0;
@@ -30,7 +33,7 @@ class SummaryService {
     }
 
     return OverallSummary(
-      summaryId: OverallSummary.generateId(),
+      summaryId: walletId,
       totalIncome: totalIncome,
       totalExpense: totalExpense,
       balance: totalIncome - totalExpense,
@@ -41,26 +44,15 @@ class SummaryService {
     );
   }
 
-  /// Tính toán OverallSummary với Initial Balance
-  static OverallSummary calculateOverallSummaryWithInitial(
-      List<Expense> expenses, InitialBalance? initialBalance) {
-    final summary = calculateOverallSummary(expenses);
-    final initialAmount = initialBalance?.amount ?? 0;
-
-    return summary.copyWith(
-      balance: initialAmount + summary.balance,
-    );
-  }
-
-  /// Tính toán số dư thực tại một thời điểm cụ thể
-  static int calculateRealBalanceAtDate(List<Expense> allExpenses,
-      DateTime date, InitialBalance? initialBalance) {
+  /// Tính toán số dư thực tại một thời điểm cụ thể cho một ví
+  static int calculateRealBalanceAtDate(
+      List<Expense> allExpenses, DateTime date, Wallet? wallet) {
     final expensesUpToDate = allExpenses
         .where((e) => e.date.isBefore(date) || isSameDay(e.date, date))
         .toList();
 
     final stats = ExpenseStats.fromExpenses(expensesUpToDate);
-    return stats.realBalance(initialBalance);
+    return stats.realBalance(wallet);
   }
 
   /// Kiểm tra xem hai ngày có cùng ngày không
@@ -70,9 +62,9 @@ class SummaryService {
         date1.day == date2.day;
   }
 
-  /// Tính toán MonthlySummary từ danh sách expenses của tháng đó
+  /// Tính toán MonthlySummary từ danh sách expenses của tháng đó cho một ví
   static MonthlySummary calculateMonthlySummary(
-      List<Expense> monthlyExpenses, int year, int month) {
+      List<Expense> monthlyExpenses, String walletId, int year, int month) {
     int totalIncome = 0;
     int totalExpense = 0;
 
@@ -85,7 +77,8 @@ class SummaryService {
     }
 
     return MonthlySummary(
-      summaryId: MonthlySummary.generateId(year, month),
+      summaryId: MonthlySummary.generateId(walletId, year, month),
+      walletId: walletId,
       year: year,
       month: month,
       totalIncome: totalIncome,
@@ -96,35 +89,9 @@ class SummaryService {
     );
   }
 
-  /// Tính toán MonthlySummary với số dư đầu tháng và cuối tháng
-  static Map<String, dynamic> calculateMonthlyBalanceBreakdown(
-      List<Expense> allExpenses,
-      int year,
-      int month,
-      InitialBalance? initialBalance) {
-    final startOfMonth = DateTime(year, month, 1);
-    final endOfMonth = DateTime(year, month + 1, 0); // Ngày cuối tháng
-
-    final openingBalance = calculateRealBalanceAtDate(
-        allExpenses, startOfMonth.subtract(Duration(days: 1)), initialBalance);
-
-    final monthlyExpenses = filterByMonth(allExpenses, year, month);
-    final monthlySummary =
-        calculateMonthlySummary(monthlyExpenses, year, month);
-
-    final closingBalance = openingBalance + monthlySummary.balance;
-
-    return {
-      'summary': monthlySummary,
-      'openingBalance': openingBalance,
-      'closingBalance': closingBalance,
-      'netChange': monthlySummary.balance,
-    };
-  }
-
-  /// Tính toán YearlySummary từ danh sách expenses của năm đó
+  /// Tính toán YearlySummary từ danh sách expenses của năm đó cho một ví
   static YearlySummary calculateYearlySummary(
-      List<Expense> yearlyExpenses, int year) {
+      List<Expense> yearlyExpenses, String walletId, int year) {
     int totalIncome = 0;
     int totalExpense = 0;
 
@@ -137,7 +104,8 @@ class SummaryService {
     }
 
     return YearlySummary(
-      summaryId: YearlySummary.generateId(year),
+      summaryId: YearlySummary.generateId(walletId, year),
+      walletId: walletId,
       year: year,
       totalIncome: totalIncome,
       totalExpense: totalExpense,
@@ -149,9 +117,9 @@ class SummaryService {
     );
   }
 
-  /// Tính toán DailySummary từ danh sách expenses của ngày đó
+  /// Tính toán DailySummary từ danh sách expenses của ngày đó cho một ví
   static DailySummary calculateDailySummary(
-      List<Expense> dailyExpenses, DateTime date) {
+      List<Expense> dailyExpenses, String walletId, DateTime date) {
     int totalIncome = 0;
     int totalExpense = 0;
 
@@ -164,7 +132,8 @@ class SummaryService {
     }
 
     return DailySummary(
-      summaryId: DailySummary.generateId(date),
+      summaryId: DailySummary.generateId(walletId, date),
+      walletId: walletId,
       date: date,
       totalIncome: totalIncome,
       totalExpense: totalExpense,
@@ -174,9 +143,10 @@ class SummaryService {
     );
   }
 
-  /// Tính toán CategorySummary từ danh sách expenses của category đó
+  /// Tính toán CategorySummary từ danh sách expenses của category đó cho một ví
   static CategorySummary calculateCategorySummary(
       List<Expense> categoryExpenses,
+      String walletId,
       String categoryId,
       String categoryName,
       TransactionType type,
@@ -187,11 +157,12 @@ class SummaryService {
         categoryExpenses.isEmpty ? 0.0 : totalAmount / categoryExpenses.length;
 
     String summaryId = month != null
-        ? CategorySummary.generateMonthlyId(categoryId, year, month)
-        : CategorySummary.generateYearlyId(categoryId, year);
+        ? CategorySummary.generateMonthlyId(walletId, categoryId, year, month)
+        : CategorySummary.generateYearlyId(walletId, categoryId, year);
 
     return CategorySummary(
       summaryId: summaryId,
+      walletId: walletId,
       categoryId: categoryId,
       categoryName: categoryName,
       type: type,
@@ -248,9 +219,9 @@ class SummaryService {
     return grouped;
   }
 
-  /// Tính toán tất cả CategorySummaries cho một tháng
+  /// Tính toán tất cả CategorySummaries cho một tháng của một ví
   static List<CategorySummary> calculateAllCategorySummariesForMonth(
-      List<Expense> expenses, int year, int month) {
+      List<Expense> expenses, String walletId, int year, int month) {
     final monthlyExpenses = filterByMonth(expenses, year, month);
     final grouped = groupByCategory(monthlyExpenses);
 
@@ -260,6 +231,7 @@ class SummaryService {
 
       return calculateCategorySummary(
         categoryExpenses,
+        walletId,
         firstExpense.category.categoryId,
         firstExpense.category.name,
         firstExpense.category.type,
@@ -269,9 +241,9 @@ class SummaryService {
     }).toList();
   }
 
-  /// Tính toán tất cả CategorySummaries cho một năm
+  /// Tính toán tất cả CategorySummaries cho một năm của một ví
   static List<CategorySummary> calculateAllCategorySummariesForYear(
-      List<Expense> expenses, int year) {
+      List<Expense> expenses, String walletId, int year) {
     final yearlyExpenses = filterByYear(expenses, year);
     final grouped = groupByCategory(yearlyExpenses);
 
@@ -281,6 +253,7 @@ class SummaryService {
 
       return calculateCategorySummary(
         categoryExpenses,
+        walletId,
         firstExpense.category.categoryId,
         firstExpense.category.name,
         firstExpense.category.type,

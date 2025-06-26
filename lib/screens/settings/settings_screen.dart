@@ -2,8 +2,8 @@ import 'package:expense_repository/expense_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:expenses_tracker/screens/settings/category_management_screen.dart';
-import 'package:expenses_tracker/screens/settings/views/initial_balance_screen.dart';
 import 'package:expenses_tracker/screens/home/views/find_expense_screen.dart';
+import 'package:expenses_tracker/screens/settings/wallet_management_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final List<Expense> expenses;
@@ -52,20 +52,10 @@ class SettingsScreen extends StatelessWidget {
                 icon: Icons.account_balance_wallet,
                 title: 'Quản lý ví tiền',
                 onTap: () {
-                  _showComingSoon(context);
-                },
-              ),
-
-              // Initial Balance (Mới)
-              _buildSettingsItem(
-                context,
-                icon: Icons.attach_money,
-                title: 'Thiết lập số dư ban đầu',
-                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const InitialBalanceScreen(),
+                      builder: (context) => const WalletManagementScreen(),
                     ),
                   );
                 },

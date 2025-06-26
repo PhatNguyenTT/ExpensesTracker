@@ -1,42 +1,44 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:expense_repository/src/entities/entities.dart';
-
-import '../models/models.dart';
+import 'package:expense_repository/src/entities/category_entity.dart';
+import 'package:expense_repository/src/models/category.dart';
 
 class ExpenseEntity {
-  final String expenseId;
-  final Category category;
-  final DateTime date;
-  final int amount;
-  final String note; // Thêm ghi chú
+  String expenseId;
+  String walletId;
+  Category category;
+  DateTime date;
+  int amount;
+  String note;
 
   ExpenseEntity({
     required this.expenseId,
+    required this.walletId,
     required this.category,
     required this.date,
     required this.amount,
     required this.note,
   });
 
-  Map<String, dynamic> toDocument() {
+  Map<String, Object?> toJson() {
     return {
       'expenseId': expenseId,
-      'category': category.toEntity().toDocument(),
+      'walletId': walletId,
+      'category': category.toEntity().toJson(),
       'date': Timestamp.fromDate(date),
       'amount': amount,
-      'note': note, // ✅ ghi chú
+      'note': note,
     };
   }
 
-  static ExpenseEntity fromDocument(Map<String, dynamic> doc) {
+  static ExpenseEntity fromJson(Map<String, dynamic> json) {
     return ExpenseEntity(
-      expenseId: doc['expenseId'] as String,
+      expenseId: json['expenseId'] as String,
+      walletId: json['walletId'] as String,
       category: Category.fromEntity(
-        CategoryEntity.fromDocument(doc['category']),
-      ),
-      date: (doc['date'] as Timestamp).toDate(),
-      amount: doc['amount'] as int,
-      note: doc['note'] as String? ?? '', // fallback nếu null
+          CategoryEntity.fromJson(json['category'] as Map<String, dynamic>)),
+      date: (json['date'] as Timestamp).toDate(),
+      amount: json['amount'] as int,
+      note: json['note'] as String,
     );
   }
 }

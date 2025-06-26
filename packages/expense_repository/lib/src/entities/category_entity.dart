@@ -17,7 +17,7 @@ class CategoryEntity {
     required this.type, // 👈
   });
 
-  Map<String, dynamic> toDocument() {
+  Map<String, dynamic> toJson() {
     return {
       'categoryId': categoryId,
       'name': name,
@@ -28,14 +28,14 @@ class CategoryEntity {
     };
   }
 
-  static CategoryEntity fromDocument(Map<String, dynamic> doc) {
+  static CategoryEntity fromJson(Map<String, dynamic> json) {
     return CategoryEntity(
-      categoryId: doc['categoryId'] as String,
-      name: doc['name'] as String,
-      totalExpenses: doc['totalExpenses'] as int,
-      icon: doc['icon'] as String,
-      color: Color(doc['color'] as int),
-      type: doc['type'] as String, // 👈
+      categoryId: json['categoryId'] as String,
+      name: json['name'] as String,
+      totalExpenses: json['totalExpenses'] as int,
+      icon: json['icon'] as String,
+      color: Color(json['color'] as int),
+      type: json['type'] as String, // 👈
     );
   }
 }

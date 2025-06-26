@@ -1,14 +1,14 @@
 import '../entities/overall_summary_entity.dart';
 
-/// Thống kê tổng hợp toàn thời gian (All-Time)
+/// Thống kê tổng hợp toàn thời gian cho từng ví
 class OverallSummary {
-  String summaryId; // Fixed: "overall"
-  int totalIncome; // Tổng thu nhập tất cả thời gian
-  int totalExpense; // Tổng chi tiêu tất cả thời gian
-  int balance; // Số dư tổng = totalIncome - totalExpense
-  int totalTransactionCount; // Tổng số giao dịch
-  DateTime firstTransactionDate; // Ngày giao dịch đầu tiên
-  DateTime lastTransactionDate; // Ngày giao dịch cuối cùng
+  String summaryId; // ID chính là walletId
+  int totalIncome; // Tổng thu nhập của ví
+  int totalExpense; // Tổng chi tiêu của ví
+  int balance; // Số dư tổng của ví = totalIncome - totalExpense
+  int totalTransactionCount; // Tổng số giao dịch của ví
+  DateTime firstTransactionDate; // Ngày giao dịch đầu tiên của ví
+  DateTime lastTransactionDate; // Ngày giao dịch cuối cùng của ví
   DateTime lastUpdated; // Lần cập nhật cuối
 
   OverallSummary({
@@ -22,16 +22,16 @@ class OverallSummary {
     required this.lastUpdated,
   });
 
-  static final empty = OverallSummary(
-    summaryId: 'overall',
-    totalIncome: 0,
-    totalExpense: 0,
-    balance: 0,
-    totalTransactionCount: 0,
-    firstTransactionDate: DateTime.now(),
-    lastTransactionDate: DateTime.now(),
-    lastUpdated: DateTime.now(),
-  );
+  static OverallSummary empty(String walletId) => OverallSummary(
+        summaryId: walletId,
+        totalIncome: 0,
+        totalExpense: 0,
+        balance: 0,
+        totalTransactionCount: 0,
+        firstTransactionDate: DateTime.now(),
+        lastTransactionDate: DateTime.now(),
+        lastUpdated: DateTime.now(),
+      );
 
   /// Fixed ID cho overall summary
   static String generateId() => 'overall';

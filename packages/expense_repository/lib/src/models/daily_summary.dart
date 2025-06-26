@@ -1,8 +1,9 @@
 import '../entities/daily_summary_entity.dart';
 
-/// Thống kê tổng hợp theo ngày
+/// Thống kê tổng hợp theo ngày cho từng ví
 class DailySummary {
-  String summaryId; // Format: "YYYY-MM-DD" (VD: "2024-03-15")
+  String summaryId; // Format: "walletId_YYYY-MM-DD"
+  String walletId; // 👈 Thêm ID của ví
   DateTime date;
   int totalIncome; // Tổng thu nhập trong ngày
   int totalExpense; // Tổng chi tiêu trong ngày
@@ -12,6 +13,7 @@ class DailySummary {
 
   DailySummary({
     required this.summaryId,
+    required this.walletId, // 👈
     required this.date,
     required this.totalIncome,
     required this.totalExpense,
@@ -22,6 +24,7 @@ class DailySummary {
 
   static final empty = DailySummary(
     summaryId: '',
+    walletId: '', // 👈
     date: DateTime.now(),
     totalIncome: 0,
     totalExpense: 0,
@@ -30,13 +33,16 @@ class DailySummary {
     lastUpdated: DateTime.now(),
   );
 
-  /// Tạo summaryId từ date
-  static String generateId(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  /// Tạo summaryId từ walletId và date
+  static String generateId(String walletId, DateTime date) {
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return '${walletId}_$dateStr';
   }
 
   DailySummary copyWith({
     String? summaryId,
+    String? walletId, // 👈
     DateTime? date,
     int? totalIncome,
     int? totalExpense,
@@ -46,6 +52,7 @@ class DailySummary {
   }) {
     return DailySummary(
       summaryId: summaryId ?? this.summaryId,
+      walletId: walletId ?? this.walletId, // 👈
       date: date ?? this.date,
       totalIncome: totalIncome ?? this.totalIncome,
       totalExpense: totalExpense ?? this.totalExpense,
@@ -58,6 +65,7 @@ class DailySummary {
   DailySummaryEntity toEntity() {
     return DailySummaryEntity(
       summaryId: summaryId,
+      walletId: walletId, // 👈
       date: date,
       totalIncome: totalIncome,
       totalExpense: totalExpense,
@@ -70,6 +78,7 @@ class DailySummary {
   static DailySummary fromEntity(DailySummaryEntity entity) {
     return DailySummary(
       summaryId: entity.summaryId,
+      walletId: entity.walletId, // 👈
       date: entity.date,
       totalIncome: entity.totalIncome,
       totalExpense: entity.totalExpense,

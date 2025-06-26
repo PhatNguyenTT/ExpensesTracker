@@ -5,6 +5,7 @@ import 'package:expense_repository/src/models/transaction_type.dart' as tt;
 import 'package:expenses_tracker/screens/addExpense/blocs/create_expense_bloc/create_expense_bloc.dart';
 import 'package:expenses_tracker/screens/addExpense/blocs/get_categories_bloc/get_categories_bloc.dart';
 import 'package:expenses_tracker/screens/addExpense/views/categoryCreation.dart';
+import 'package:expenses_tracker/screens/home/blocs/active_wallet_bloc/active_wallet_bloc.dart';
 import 'package:expenses_tracker/utils/icon_mapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,8 +37,15 @@ class _AddExpenseState extends State<AddExpense>
   @override
   void initState() {
     super.initState();
+    final activeWalletState = context.read<ActiveWalletBloc>().state;
+    String activeWalletId = '';
+    if (activeWalletState is ActiveWalletLoaded) {
+      activeWalletId = activeWalletState.activeWallet.walletId;
+    }
+
     dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
-    expense = widget.expenseToEdit?.copyWith() ?? Expense.empty;
+    expense = widget.expenseToEdit?.copyWith() ??
+        Expense.empty.copyWith(walletId: activeWalletId);
 
     if (widget.expenseToEdit != null) {
       expenseController.text =
@@ -50,6 +58,7 @@ class _AddExpenseState extends State<AddExpense>
       expense.expenseId = const Uuid().v1();
       expense.date = DateTime.now();
       expense.category = Category.empty;
+      expense.walletId = activeWalletId;
       categoryController.clear();
     }
 
